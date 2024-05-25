@@ -1,0 +1,22 @@
+<!-- chatbot.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatbot</title>
+</head>
+<body>
+    <h1>Chatbot</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="user_input">Enter your message:</label>
+        <input type="text" id="user_input" name="user_input" required>
+        <button type="submit">Send</button>
+    </form>
+    {% if response %}
+    <h2>Chatbot's Response:</h2>
+    <p>{{ response|linebreaks }}</p>
+    {% else %}
+    <p>Ask the chatbot a question!</p>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!-- home.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Web App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container my-5">
+        <h1>Welcome to My Web App</h1>
+        <p>This is the home page.</p>
+        <a href="{% url 'chatbot' %}" class="btn btn-primary">Go to Chatbot</a>
+    </div>
+</body>
+</html>
+
+<!-- chatbot.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatbot</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container my-5">
+        <h1>Chatbot</h1>
+        <form method="post" class="mb-3">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="user_input">Enter your message:</label>
+                <input type="text" id="user_input" name="user_input" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+        {% if response %}
+            <h2>Chatbot's Response:</h2>
+            <p>{{ response }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
