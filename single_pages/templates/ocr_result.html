@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ocr_result</title>
+</head>
+<body>
+<!-- templates/ocr_result.html -->
+{% extends 'ocr.html' %}
+
+{% block content %}
+    <h2>OCR 결과</h2>
+    <p>{{ ocr_text }}</p>
+
+    <form method="post" action="{% url 'detail' %}">
+        {% csrf_token %}
+        <button type="submit">상세 페이지로 이동</button>
+    </form>
+
+{% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}
+</body>
+</html>

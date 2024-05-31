@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ocr2</title>
+</head>
+<body>
+{% extends 'home.html' %}
+
+{% block content %}
+    <h2>OCR</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="image" required>
+        <button type="submit">Submit</button>
+    </form>
+{% endblock %}
+
+</body>
+</html>
