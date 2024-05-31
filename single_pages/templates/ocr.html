@@ -5,16 +5,16 @@
     <title>OCR</title>
 </head>
 <body>
-<!--{% extends 'home.html' %}-->
+{% extends 'home.html' %}
 
-<!--{% block content %}-->
-    <h2>OCR</h2>
+{% block content %}
+    <h1>OCR</h1>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="file" name="image" required>
         <button type="submit">Submit</button>
     </form>
-<!--{% endblock %}-->
+{% endblock %}
 
 </body>
 </html>

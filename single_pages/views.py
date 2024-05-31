@@ -51,7 +51,7 @@ def ocr_view(request):
         else:
             messages.error(request, 'OCR 처리 중 오류가 발생했습니다.')
 
-            return render(request, 'ocr2.html')
+    return render(request, 'ocr.html')
 
 
 def detail_view(request):
@@ -60,7 +60,7 @@ def detail_view(request):
 
         if search_query:
             # 공공데이터 API 검색
-            public_data_url = 'https://your-public-data-api-url'
+            public_data_url = 'http://apis.data.go.kr/1471000/DURPrdlstInfoService03'
             params = {
                 'query': search_query,
                 'serviceKey': settings.PUBLIC_DATA_API_KEY,
@@ -77,7 +77,7 @@ def detail_view(request):
         else:
             messages.error(request, '검색 쿼리가 없습니다.')
 
-            return render(request, 'ocr_result.html')
+    return render(request, 'ocr_result.html')
 
 
 
