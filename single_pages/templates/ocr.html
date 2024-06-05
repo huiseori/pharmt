@@ -9,7 +9,7 @@
 
 {% block content %}
     <h1>OCR</h1>
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" action="{% url 'ocr_process' %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="file" name="image" required>
         <button type="submit">Submit</button>
