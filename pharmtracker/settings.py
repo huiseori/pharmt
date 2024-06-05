@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'single_pages',
+
 ]
 
 MIDDLEWARE = [
@@ -112,6 +113,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -126,5 +130,6 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OPENAI_API_KEY = ''
+NAVER_OCR_API_ID='THVmbkVCTU1vamNHVWNzR0N3QkZOa3FrY3Z1T2JZZE4='
 NAVER_OCR_API_KEY='THVmbkVCTU1vamNHVWNzR0N3QkZOa3FrY3Z1T2JZZE4='
 PUBLIC_DATA_API_KEY = 'We3PXjbxHr7km3vJpCmXWEaiMARYPCK3a8oIMd4q8BPqP0Dbw04BXt9P6LBlINf9152m5h0WeCQwZUZ0KayQGg%3D%3D'
