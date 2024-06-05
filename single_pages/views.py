@@ -1,6 +1,22 @@
 # views.py
 from django.shortcuts import render
+
+from django.shortcuts import render
+from django.http import JsonResponse
+import os
+import uuid
+import json
+import time
+import platform
+import numpy as np
+import cv2
+import requests
+from PIL import ImageFont, ImageDraw, Image
+
+
 from .models import ChatbotModel
+# secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
+
 
 def home_view(request):
     return render(request, 'home.html')
@@ -25,76 +41,86 @@ from django.shortcuts import render, redirect
 
 
 
+# views.py
+import requests
+from django.shortcuts import render, redirect
+
+api_url = 'https://f2njh1jvk0.apigw.ntruss.com/custom/v1/31289/20f7f9592ec261660e6a41d64f3cd240d068f9e641c7fe728341b9a2e0979ff0/general'
+secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
+
+
 def ocr_view(request):
-    if request.method == 'POST':
-        image = request.FILES.get('image')
-        if not image:
-            messages.error(request, '이미지를 선택해주세요.')
-            return render(request, 'ocr.html')
-        try:
-            # Naver Clova OCR API 호출
-            ocr_url = 'https://f2njh1jvk0.apigw.ntruss.com/custom/v1/31289/20f7f9592ec261660e6a41d64f3cd240d068f9e641c7fe728341b9a2e0979ff0/general'
-            headers = {
-                'X-NCP-APIGW-API-KEY-ID': settings.NAVER_OCR_API_ID,
-                'X-NCP-APIGW-API-KEY': settings.NAVER_OCR_API_KEY,
-            }
-            files = {'image': image.read()}
-            ocr_response = requests.post(ocr_url, headers=headers, files=files)
-
-            if ocr_response.status_code == 200:
-                json_data = ocr_response.json()
-                if 'images' in json_data and json_data['images']:
-                    ocr_text = json_data['images'][0]['fields'][0]['inferText']
-                    request.session['search_query'] = ocr_text
-                    return render(request, 'ocr_result.html', {'ocr_text': ocr_text})
-                else:
-                    messages.error(request, '텍스트를 추출할 수 없습니다.')
-
-            else:
-                messages.error(request, 'OCR API 오류: {}'.format(ocr_response.status_code))
-        except Exception as e:
-            messages.error(request, '오류 발생: {}'.format(str(e)))
-
     return render(request, 'ocr.html')
-    #         ocr_text = ocr_response.json()['images'][0]['fields'][0]['inferText']
-    #
-    #         # 검색 데이터 생성
-    #         search_query = ocr_text
-    #
-    #         # 검색 결과를 세션에 저장
-    #         request.session['search_query'] = search_query
-    #
-    #         return render(request, 'ocr_result.html', {'ocr_text': ocr_text})
-    #     else:
-    #         messages.error(request, 'OCR 처리 중 오류가 발생했습니다.')
-    #
-    # return render(request, 'ocr.html')
 
+def put_text(image, text, x, y, color=(0, 255, 0), font_size=22):
+    if type(image) == np.ndarray:
+        color_coverted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(color_coverted)
 
-# def detail_view(request):
-#     if request.method == 'POST':
-#         search_query = request.session.get('search_query')
-#
-#         if search_query:
-#             # 공공데이터 API 검색
-#             public_data_url = 'http://apis.data.go.kr/1471000/DURPrdlstInfoService03'
-#             params = {
-#                 'query': search_query,
-#                 'serviceKey': settings.PUBLIC_DATA_API_KEY,
-#             }
-#             response = requests.get(public_data_url, params=params)
-#
-#             if response.status_code == 200:
-#                 data = response.json()
-#                 # 데이터 처리 로직
-#
-#                 return render(request, 'drug_detail.html', {'drug_data': data})
-#             else:
-#                 messages.error(request, '공공데이터 API 호출 중 오류가 발생했습니다.')
-#         else:
-#             messages.error(request, '검색 쿼리가 없습니다.')
-#
-#     return render(request, 'ocr_result.html')
+    if platform.system() == 'Darwin':
+        font = 'AppleGothic.ttf'
+    elif platform.system() == 'Windows':
+        font = 'malgun.ttf'
 
+    image_font = ImageFont.truetype(font, font_size)
+    draw = ImageDraw.Draw(image)
+    draw.text((x, y), text, font=image_font, fill=color)
+
+    numpy_image = np.array(image)
+    opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+
+    return opencv_image
+
+def ocr_process(request):
+    if request.method == 'POST' and request.FILES['image']:
+        image_file = request.FILES['image']
+        path = os.path.join('uploads', image_file.name)
+        with open(path, 'wb') as f:
+            for chunk in image_file.chunks():
+                f.write(chunk)
+
+        files = [('file', open(path, 'rb'))]
+
+        request_json = {
+            'images': [{'format': 'jpg', 'name': 'demo'}],
+            'requestId': str(uuid.uuid4()),
+            'version': 'V2',
+            'timestamp': int(round(time.time() * 1000))
+        }
+
+        payload = {'message': json.dumps(request_json).encode('UTF-8')}
+
+        headers = {
+            'X-OCR-SECRET': secret_key,
+        }
+
+        response = requests.post(api_url, headers=headers, data=payload, files=files)
+        result = response.json()
+
+        img = cv2.imread(path)
+        roi_img = img.copy()
+
+        for field in result['images'][0]['fields']:
+            text = field['inferText']
+            vertices_list = field['boundingPoly']['vertices']
+            pts = [tuple(vertice.values()) for vertice in vertices_list]
+            topLeft = [int(_) for _ in pts[0]]
+            topRight = [int(_) for _ in pts[1]]
+            bottomRight = [int(_) for _ in pts[2]]
+            bottomLeft = [int(_) for _ in pts[3]]
+
+            cv2.line(roi_img, topLeft, topRight, (0, 255, 0), 2)
+            cv2.line(roi_img, topRight, bottomRight, (0, 255, 0), 2)
+            cv2.line(roi_img, bottomRight, bottomLeft, (0, 255, 0), 2)
+            cv2.line(roi_img, bottomLeft, topLeft, (0, 255, 0), 2)
+            roi_img = put_text(roi_img, text, topLeft[0], topLeft[1] - 10, font_size=30)
+
+        # Save the processed image to serve it to the frontend
+        processed_image_path = os.path.join('uploads', 'processed_' + image_file.name)
+        cv2.imwrite(processed_image_path, roi_img)
+
+        return render(request, 'ocr.html', {'processed_image_path': '/' + processed_image_path})
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
