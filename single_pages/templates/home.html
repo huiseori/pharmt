@@ -4,14 +4,121 @@
 <head>
     <title>My Web App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .content {
+            margin-top: 50px;
+            margin-bottom: 180px;
+        }
+        h1 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #50C3E7;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+        .search-bar {
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .search-bar input {
+            border: none;
+            padding: 12px 20px;
+        }
+        .search-bar button {
+            border: none;
+            background-color: #50C3E7;
+            color: #fff;
+            padding: 12px 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .tab-buttons a {
+            color: #50C3E7;
+            text-decoration: none;
+            font-size: 16px;
+            text-align: center;
+            padding: 15px 30px;
+            border-radius: 30px;
+            margin: 0 15px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-buttons a:hover {
+            background-color: #50C3E7;
+            color: #fff;
+        }
+        .tab-buttons a i {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .camera-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #50C3E7;
+            color: #fff;
+            text-align: center;
+            line-height: 70px;
+            text-decoration: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+            font-size: 28px;
+        }
+        .camera-btn:hover {
+            background-color: #3aa0c9;
+        }
+    </style>
 </head>
 <body>
-    <div class="container my-5">
-        <h1>Welcome to My Web App</h1>
-        <p>This is the home page.</p>
-        <a href="{% url 'chatbot' %}" class="btn btn-primary">Go to Chatbot</a>
-        <a href="{% url 'ocr' %}" class="btn btn-primary">Go to OCR</a>
+    <div class="container content">
+        <h1 class="text-center">팜트래커</h1>
+        <div class="search-bar mx-auto">
+            <form action="{% url 'drug_detail' %}" method="get">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="drug_name" placeholder="의약품명/ 상품명력" required>
+                    <div class="input-group-append">
+                        <button class="btn" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
+
+    <div class="tab-buttons">
+        <a href="{% url 'news' %}">
+            <i class="fas fa-robot"></i>
+            약학뉴스
+        </a>
+        <a href="{% url 'chatbot' %}">
+            <i class="fas fa-comments"></i>
+            팜트래커 챗봇
+        </a>
+        <a href="{% url 'drug_detail' %}">
+            <i class="fas fa-capsules"></i>
+            의약품 상세 정보
+        </a>
+    </div>
+
+    <a href="{% url 'ocr' %}" class="camera-btn">
+        <i class="fas fa-camera"></i>
+    </a>
+
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit-id.js" crossorigin="anonymous"></script>
 </body>
 </html>
 

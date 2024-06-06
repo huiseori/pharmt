@@ -132,7 +132,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPENAI_API_KEY = ''
 # NAVER_OCR_API_ID='THVmbkVCTU1vamNHVWNzR0N3QkZOa3FrY3Z1T2JZZE4='
 # NAVER_OCR_API_KEY='VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
-# PUBLIC_DATA_API_KEY = 'We3PXjbxHr7km3vJpCmXWEaiMARYPCK3a8oIMd4q8BPqP0Dbw04BXt9P6LBlINf9152m5h0WeCQwZUZ0KayQGg%3D%3D'
+PUBLIC_DATA_API_KEY = 'We3PXjbxHr7km3vJpCmXWEaiMARYPCK3a8oIMd4q8BPqP0Dbw04BXt9P6LBlINf9152m5h0WeCQwZUZ0KayQGg%3D%3D'
+DUR_API_KEY = 'v1RI90KCDrEbFktChe7AJrqaQZjthMNnpk5aWRwbuLjTYADawSEBxDlfJu5LBctjCRYs%2BfB4MR0eLuBrIdQB4Q%3D%3D'
 
 # Media files (uploads)
 
@@ -142,3 +143,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 import os
 
 BASE_DIR= os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+ALLOWED_HOSTS = ['*']  # 모든 호스트 허용

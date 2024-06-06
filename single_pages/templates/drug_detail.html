@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>의약품 상세 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            color: #50C3E7;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .btn-primary {
+            background-color: #50C3E7;
+            border: none;
+            padding: 10px 20px;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background-color: #3aa0c9;
+        }
+        .drug-info {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .drug-info h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .drug-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>의약품 정보 검색</h1>
+        <form method="get">
+            <div class="form-group">
+                <label for="drug_name">의약품 이름:</label>
+                <input type="text" id="drug_name" name="drug_name" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">검색</button>
+        </form>
+        {% if drug_info %}
+            {% for drug in drug_info %}
+            <div class="drug-info">
+                <h2>{{ drug.item_name }}</h2>
+                <p><strong>성분 코드:</strong> {{ drug.ingr_code }}</p>
+                <p><strong>성분명:</strong> {{ drug.ingr_kor_name }}</p>
+                <p><strong>혼합:</strong> {{ drug.mix }}</p>
+                <p><strong>혼합 유형:</strong> {{ drug.mix_type }}</p>
+                <p><strong>주의사항:</strong> {{ drug.se_qesitm }}</p>
+                <p><strong>제조사:</strong> {{ drug.entp_name }}</p>
+            </div>
+            {% endfor %}
+        {% elif error_message %}
+        <p class="error-message">{{ error_message }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

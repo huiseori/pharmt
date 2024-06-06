@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>OCR</title>
+    <title>약학 뉴스</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
-     <style>
+    <style>
         body {
             background-color: #f8f9fa;
         }
@@ -19,17 +19,20 @@
             margin-bottom: 30px;
             text-align: center;
         }
-        .form-group label {
-            font-weight: bold;
+        .list-group-item {
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .list-group-item h5 {
+            color: #333;
+        }
+        .list-group-item p {
             color: #555;
         }
-        .btn-primary {
-            background-color: #50C3E7;
-            border-color: #50C3E7;
-        }
-        .btn-primary:hover {
-            background-color: #3aa0c9;
-            border-color: #3aa0c9;
+        .list-group-item small {
+            color: #888;
         }
         .tab-buttons {
             display: flex;
@@ -57,42 +60,26 @@
             font-size: 24px;
             margin-bottom: 8px;
         }
-        .img-fluid {
-            max-width: 100%;
-            height: auto;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            padding: 5px;
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
-    <div class="container my-5">
-        <h1>OCR</h1>
+    <div class="container">
+        <h1>약학 뉴스</h1>
         <div class="tab-buttons">
             <a href="{% url 'home' %}">
                 <i class="fas fa-home"></i>
                 홈
             </a>
         </div>
-
-        <form method="post" action="{% url 'ocr_process' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="image">Upload an image for OCR:</label>
-                <input type="file" id="image" name="image" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </form>
-
-        {% if processed_image_path %}
-            <div class="mt-5">
-                <h2>Processed Image:</h2>
-                <img src="{{ processed_image_path }}" class="img-fluid">
-            </div>
-        {% endif %}
+        <div class="list-group">
+            {% for article in articles %}
+                <a href="{{ article.link }}" class="list-group-item list-group-item-action" target="_blank">
+                    <h5 class="mb-1">{{ article.title }}</h5>
+                    <p class="mb-1">{{ article.summary }}</p>
+                    <small>{{ article.date }}</small>
+                </a>
+            {% endfor %}
+        </div>
     </div>
 </body>
-
 </html>
