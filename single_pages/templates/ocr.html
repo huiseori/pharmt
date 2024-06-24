@@ -1,35 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OCR</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
-     <style>
+    <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #ffffff;
+            color: #333;
         }
         .container {
-            margin-top: 50px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 50px auto;
         }
         h1 {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #50C3E7;
-            font-weight: 700;
-            margin-bottom: 30px;
             text-align: center;
+            margin-bottom: 30px;
         }
-        .form-group label {
-            font-weight: bold;
-            color: #555;
+        .custom-file-input {
+            position: relative;
+            z-index: 2;
+        }
+        .custom-file-input ~ .custom-file-label::after {
+            content: "Browse";
+        }
+        .custom-file-input:focus ~ .custom-file-label {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .custom-file-label {
+            background-color: #f1f1f1;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 1rem;
+            color: #495057;
         }
         .btn-primary {
             background-color: #50C3E7;
-            border-color: #50C3E7;
+            border: none;
+            width: 100%;
+            padding: 10px;
+            font-size: 1.1rem;
         }
         .btn-primary:hover {
-            background-color: #3aa0c9;
-            border-color: #3aa0c9;
+            background-color: #3aaac3;
         }
         .tab-buttons {
             display: flex;
@@ -57,18 +79,18 @@
             font-size: 24px;
             margin-bottom: 8px;
         }
-        .img-fluid {
+        #image-preview {
+            margin-top: 20px;
             max-width: 100%;
             height: auto;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            padding: 5px;
-            margin-top: 20px;
+            display: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
-    <div class="container my-5">
+    <div class="container">
         <h1>OCR</h1>
         <div class="tab-buttons">
             <a href="{% url 'home' %}">
@@ -76,23 +98,43 @@
                 홈
             </a>
         </div>
-
         <form method="post" action="{% url 'ocr_process' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
                 <label for="image">Upload an image for OCR:</label>
-                <input type="file" id="image" name="image" class="form-control" required>
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="image" name="image" accept="image/*" required>
+                    <label class="custom-file-label" for="image">Choose file</label>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">Upload</button>
         </form>
-
+        <!-- 미리보기 이미지 -->
+        <img id="image-preview" class="img-fluid" alt="Image Preview">
         {% if processed_image_path %}
-            <div class="mt-5">
-                <h2>Processed Image:</h2>
-                <img src="{{ processed_image_path }}" class="img-fluid">
-            </div>
+            <h2 class="mt-5">Processed Image</h2>
+            <img src="{{ processed_image_path }}" class="img-fluid">
         {% endif %}
     </div>
-</body>
 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // 파일 선택 시 파일 이름 표시
+        $(".custom-file-input").on("change", function() {
+            var fileName = $(this).val().split("\\").pop();
+            $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+
+            // 파일 미리보기
+            if (this.files && this.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#image-preview').attr('src', e.target.result).show();
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    </script>
+</body>
 </html>

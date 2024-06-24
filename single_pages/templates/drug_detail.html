@@ -61,6 +61,13 @@
             margin: 5px 0;
             color: #555;
         }
+        .drug-info a {
+            color: #50C3E7;
+            text-decoration: none;
+        }
+        .drug-info a:hover {
+            text-decoration: underline;
+        }
         .error-message {
             color: red;
             text-align: center;
@@ -88,6 +95,7 @@
                 <p><strong>혼합 유형:</strong> {{ drug.mix_type }}</p>
                 <p><strong>주의사항:</strong> {{ drug.se_qesitm }}</p>
                 <p><strong>제조사:</strong> {{ drug.entp_name }}</p>
+                <p><a href="{{ drug.detail_link }}" target="_blank">상세 정보 보기</a></p> <!-- 상세 정보 링크 추가 -->
             </div>
             {% endfor %}
         {% elif error_message %}
