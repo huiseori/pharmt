@@ -60,6 +60,29 @@
             color: #fff;
             padding: 12px 20px;
         }
+         .feature-card {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            text-decoration: none;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,.1);
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
         .tab-buttons {
             display: flex;
             justify-content: center;
@@ -109,12 +132,37 @@
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">팜트래커</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">홈</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'news' %}">약학뉴스</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'drug_detail' %}">의약품 정보</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}">챗봇</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
     <div class="container content">
         <h1 class="text-center">팜트래커</h1>
         <div class="search-bar mx-auto">
             <form action="{% url 'drug_detail' %}" method="get">
                 <div class="input-group">
-                    <input type="text" class="form-control" name="drug_name" placeholder="의약품명/ 성분명" required>
+                    <input type="text" class="form-control" name="drug_name" placeholder="의약품명 또는 상품명을 입력하세요" required>
                     <div class="input-group-append">
                         <button class="btn" type="submit">
                             <i class="fas fa-search"></i>
@@ -125,22 +173,32 @@
         </div>
     </div>
 
-    <div class="tab-buttons">
-        <a href="{% url 'news' %}">
-            <i class="fas fa-robot"></i>
-            약학뉴스
-        </a>
-        <a href="{% url 'chatbot' %}">
-            <i class="fas fa-comments"></i>
-            팜트래커 챗봇
-        </a>
-        <a href="{% url 'drug_detail' %}">
-            <i class="fas fa-capsules"></i>
-            의약품 상세 정보
-        </a>
+    <div class="features row row-cols-1 row-cols-md-3 g-4 mt-5">
+        <div class="col">
+            <a href="{% url 'news' %}" class="feature-card">
+                <i class="fas fa-newspaper feature-icon"></i>
+                <h3>약학뉴스</h3>
+                <p>최신 의약품 소식과 연구 동향을 확인하세요.</p>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{% url 'chatbot' %}" class="feature-card">
+                <i class="fas fa-robot feature-icon"></i>
+                <h3>팜트래커 챗봇</h3>
+                <p>의약품 관련 질문에 실시간으로 답변해드립니다.</p>
+            </a>
+        </div>
+        <div class="col">
+            <a href="{% url 'drug_detail' %}" class="feature-card">
+                <i class="fas fa-pills feature-icon"></i>
+                <h3>의약품 상세 정보</h3>
+                <p>효능, 부작용, 복용법 등 상세한 정보를 제공합니다.</p>
+            </a>
+        </div>
     </div>
 
-    <a href="{% url 'ocr' %}" class="camera-btn">
+
+    <a href="{% url 'ocr' %}" class="camera-btn" title="이미지로 의약품 검색">
         <i class="fas fa-camera"></i>
     </a>
 
