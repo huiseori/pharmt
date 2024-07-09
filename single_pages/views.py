@@ -30,16 +30,42 @@ from .models import ChatbotModel
 def home_view(request):
     return render(request, 'home.html')
 
+import openai  # Assuming you're using OpenAI's GPT-3/4 as the chatbot backend
+from django.views.decorators.csrf import csrf_exempt
+
+# Add your OpenAI API key here
+openai.api_key = 'sk-proj-lNNVV0yUcfVFllhJBv1GT3BlbkFJhaMXeqwt6QSUXD1zWwwL'
+@csrf_exempt
 def chatbot_view(request):
+    conversation = request.session.get('conversation', [])
+    response = None
+    error_message = None
+
     if request.method == 'POST':
         user_input = request.POST.get('user_input')
-        chatbot = ChatbotModel()
-        response = chatbot.generate_response(user_input)
-        context = {'response': response}
-        return render(request, 'chatbot.html', context)
-    else:
-        context = {'response': ''}
-        return render(request, 'chatbot.html', context)
+
+        if user_input:
+            conversation.append({'sender': 'user', 'text': user_input})
+            try:
+                # Use OpenAI API to get chatbot response with gpt-3.5-turbo model
+                openai_response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": user_input}
+                    ]
+                )
+                bot_response = openai_response.choices[0].message['content'].strip()
+                conversation.append({'sender': 'bot', 'text': bot_response})
+            except Exception as e:
+                error_message = f"Error: {str(e)}"
+        else:
+            error_message = "Please enter a message."
+
+    # Save the updated conversation in the session
+    request.session['conversation'] = conversation
+
+    return render(request, 'chatbot.html', {'conversation': conversation, 'error_message': error_message})
 
 
 # views.py

@@ -6,6 +6,15 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
     <style>
+
+        .navbar {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+        .navbar-brand {
+            font-weight: 1000;
+            color: var(--primary-color);
+        }
         body {
             background-color: #f8f9fa;
         }
@@ -63,14 +72,35 @@
     </style>
 </head>
 <body>
+     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">팜트래커</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'news' %}">약학뉴스</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'drug_detail' %}">의약품 정보</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}">챗봇</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+     </nav>
     <div class="container">
         <h1>약학 뉴스</h1>
-        <div class="tab-buttons">
-            <a href="{% url 'home' %}">
-                <i class="fas fa-home"></i>
-                홈
-            </a>
-        </div>
+<!--        <div class="tab-buttons">-->
+<!--            <a href="{% url 'home' %}">-->
+<!--                <i class="fas fa-home"></i>-->
+<!--                홈-->
+<!--            </a>-->
+<!--        </div>-->
         <div class="list-group">
             {% for article in articles %}
                 <a href="{{ article.link }}" class="list-group-item list-group-item-action" target="_blank">
