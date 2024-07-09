@@ -33,6 +33,9 @@ def home_view(request):
 import openai  # Assuming you're using OpenAI's GPT-3/4 as the chatbot backend
 from django.views.decorators.csrf import csrf_exempt
 
+from django.shortcuts import render
+from pharmtracker.rag_utils import query_similar_drugs
+
 # Add your OpenAI API key here
 openai.api_key = 'sk-proj-lNNVV0yUcfVFllhJBv1GT3BlbkFJhaMXeqwt6QSUXD1zWwwL'
 @csrf_exempt
@@ -47,16 +50,39 @@ def chatbot_view(request):
         if user_input:
             conversation.append({'sender': 'user', 'text': user_input})
             try:
+                # Query similar drugs using RAG
+                similar_drugs = query_similar_drugs(user_input, n_results=3)
+
+                # Prepare context with drug information
+                context = "Relevant drug information:\n"
+                for drug in similar_drugs:
+                    context += f"- {drug['item_name']} (성분: {drug['ingr_kor_name']}): {drug['se_qesitm']}\n"
+
                 # Use OpenAI API to get chatbot response with gpt-3.5-turbo model
+                messages = [
+                    {"role": "system", "content": "You are a helpful assistant specializing in pharmaceutical information. Use the provided drug information to answer questions accurately."},
+                    {"role": "user", "content": f"{context}\n\nUser question: {user_input}"}
+                ]
                 openai_response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
+                    messages=messages
+                )
+                # Use OpenAI API to get chatbot response with gpt-3.5-turbo model
+                openai_response = openai.ChatCompletion.create(
+
                     messages=[
-                        {"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": user_input}
+                        {"role": "system", "content": "You are a helpful assistant specializing in pharmaceutical information. Use the provided drug information to answer questions accurately."},
+                        {"role": "user", "content": f"{context}\n\nUser question: {user_input}"}
                     ]
                 )
                 bot_response = openai_response.choices[0].message['content'].strip()
                 conversation.append({'sender': 'bot', 'text': bot_response})
+
+                # Add similar drugs information to the conversation
+                drug_info = "관련 의약품 정보:\n" + "\n".join(
+                    [f"- {drug['item_name']} (성분: {drug['ingr_kor_name']})" for drug in similar_drugs])
+                conversation.append({'sender': 'bot', 'text': drug_info})
+
             except Exception as e:
                 error_message = f"Error: {str(e)}"
         else:

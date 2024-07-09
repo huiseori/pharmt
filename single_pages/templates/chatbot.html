@@ -76,31 +76,51 @@
         </div>
     </nav>
     <div class="container my-5">
-        <h1 class="text-center">Chatbot</h1>
-        <div class="chat-container">
-            <div class="chat-box">
-                {% if conversation %}
-                    {% for message in conversation %}
-                        <div class="message {{ message.sender }}">
+    <h1 class="text-center">의약품 정보 챗봇</h1>
+    <div class="chat-container">
+        <div class="chat-box">
+            {% if conversation %}
+                {% for message in conversation %}
+                    {% if message.sender == 'user' %}
+                        <div class="message user">
                             <p>{{ message.text }}</p>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="user_input">Enter your message:</label>
-                    <input type="text" id="user_input" name="user_input" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Send</button>
-            </form>
-            {% if error_message %}
-                <div class="alert alert-danger mt-3" role="alert">
-                    {{ error_message }}
-                </div>
+                    {% elif message.sender == 'bot' %}
+                        <div class="message bot">
+                            <p>{{ message.text }}</p>
+                        </div>
+                        {% if message.drug_info %}
+                            <div class="drug-info">
+                                <h4>관련 의약품 정보:</h4>
+                                <ul>
+                                    {% for drug in message.drug_info %}
+                                        <li>
+                                            <strong>{{ drug.item_name }}</strong> (성분: {{ drug.ingr_kor_name }})
+                                            <br>
+                                            <small>{{ drug.se_qesitm }}</small>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
             {% endif %}
         </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="user_input">질문을 입력하세요:</label>
+                <input type="text" id="user_input" name="user_input" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">전송</button>
+        </form>
+        {% if error_message %}
+            <div class="alert alert-danger mt-3" role="alert">
+                {{ error_message }}
+            </div>
+        {% endif %}
     </div>
+</div>
 </body>
 </html>
