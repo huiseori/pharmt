@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>약학 뉴스 요약</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #50C3E7;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .article-summary {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .article-summary h2 {
+            color: #333;
+        }
+        .article-summary p {
+            color: #555;
+            line-height: 1.6;
+        }
+        .article-summary small {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>약학 뉴스 요약</h1>
+        <div class="article-summary">
+            <h2>{{ article.title }}</h2>
+            <p><small>{{ article.date }} | {{ article.author }}</small></p>
+            <p>{{ article.full_summary }}</p>
+            <a href="{{ article.link }}" class="btn btn-primary" target="_blank">전체 기사 읽기</a>
+        </div>
+    </div>
+</body>
+</html>

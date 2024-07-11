@@ -26,6 +26,10 @@ from PIL import ImageFont, ImageDraw, Image
 from .models import ChatbotModel
 # secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
 
+def mypage_view(request):
+    # 예시로 사용자 정보를 가져오는 방법입니다. 실제로는 사용자 인증 로직이 필요합니다.
+    return render(request, 'mypage.html')
+
 
 def home_view(request):
     return render(request, 'home.html')
@@ -405,6 +409,40 @@ def news_view(request):
     page = request.GET.get('page', 1)
     articles = get_articles(page)
     return render(request, 'news.html', {'articles': articles})
+
+def news_summary_view(request, article_id):
+    page = request.GET.get('page', 1)
+    articles = get_articles(page)
+    article = articles[article_id]
+
+    article_response = requests.get(article['link'])
+    article_response.encoding = 'utf-8'
+    article_soup = BeautifulSoup(article_response.text, 'html.parser')
+
+    article_content = article_soup.select_one('.view_con_t')
+    if article_content:
+        article_text = article_content.get_text(strip=True)
+    else:
+        article_text = article_soup.get_text(strip=True)
+
+    max_length = 10000  # 길이 증가
+    article_text = article_text[:max_length]
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes Korean news articles."},
+                {"role": "user", "content": f"다음 기사를 자세히 요약해주세요 (약 300-400자):\n\n{article_text}"}
+            ],
+            max_tokens=500  # 토큰 수 증가
+        )
+        full_summary = response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        full_summary = f"요약 생성 중 오류 발생: {str(e)}"
+
+    article['full_summary'] = full_summary
+    return render(request, 'news_summary.html', {'article': article})
 
 
 
