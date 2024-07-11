@@ -11,8 +11,8 @@ client = chromadb.Client(Settings(allow_reset=True))
 collection = client.create_collection("drug_embeddings")
 
 
-def fetch_drug_data_from_api(url: str, params: Dict) -> List[Dict]:
-    response = requests.get(url, params=params)
+def fetch_drug_data_from_api(dur_url: str, params: Dict) -> List[Dict]:
+    response = requests.get(dur_url, params=params)
     data = response.json()
 
     processed_data = []
@@ -64,7 +64,7 @@ def query_similar_drugs(query: str, n_results: int = 3) -> List[Dict]:
 
 
 def update_drug_database():
-    api_url = settings.DUR_API_KEY
+    dur_url = settings.DUR_API_KEY
     params = {'key': 'API_KEY', 'pageNo': 1, 'numOfRows': 100}
-    drugs = fetch_drug_data_from_api(api_url, params)
+    drugs = fetch_drug_data_from_api(dur_url, params)
     store_embeddings(drugs)

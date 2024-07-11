@@ -68,15 +68,15 @@ def chatbot_view(request):
                     messages=messages
                 )
                 # Use OpenAI API to get chatbot response with gpt-3.5-turbo model
-                openai_response = openai.ChatCompletion.create(
-
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant specializing in pharmaceutical information. Use the provided drug information to answer questions accurately."},
-                        {"role": "user", "content": f"{context}\n\nUser question: {user_input}"}
-                    ]
-                )
+                # openai_response = openai.ChatCompletion.create(
+                #
+                #     messages=[
+                #         {"role": "system", "content": "You are a helpful assistant specializing in pharmaceutical information. Use the provided drug information to answer questions accurately."},
+                #         {"role": "user", "content": f"{context}\n\nUser question: {user_input}"}
+                #     ]
+                # )
                 bot_response = openai_response.choices[0].message['content'].strip()
-                conversation.append({'sender': 'bot', 'text': bot_response})
+                conversation.append({'sender': 'bot', 'text': bot_response, 'drug_info': similar_drugs})
 
                 # Add similar drugs information to the conversation
                 drug_info = "관련 의약품 정보:\n" + "\n".join(
