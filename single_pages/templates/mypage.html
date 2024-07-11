@@ -44,33 +44,109 @@
             margin-bottom: 30px;
             font-size: 2rem;
         }
-        .my-info-card {
+        .search-bar {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .search-bar .form-control {
+            border-radius: 30px 0 0 30px;
+            border: 2px solid var(--primary-color);
+            border-right: none;
+        }
+        .search-bar .btn {
+            border-radius: 0 30px 30px 0;
+            background-color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+        .features {
+            margin-top: 50px;
+        }
+        .feature-card {
             background-color: #fff;
             border-radius: 10px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            text-decoration: none;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .my-orders-card {
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,.1);
         }
-        .logout-btn {
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        .camera-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             background-color: var(--primary-color);
             color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            text-align: center;
+            line-height: 60px;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,.2);
+            transition: background-color 0.3s;
+        }
+        .camera-btn:hover {
+            background-color: var(--secondary-color);
+            color: #fff;
+        }
+
+        /* 추가한 부분: 마이페이지 메뉴 */
+        #myPageMenu {
+            position: fixed;
+            top: 60px;
+            right: -300px;
+            width: 300px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            transition: right 0.3s ease-in-out;
+            z-index: 1000;
+            padding: 10px;
+        }
+
+        /* 아래의 CSS는 :target 사용을 대체하는 방식으로 변경 */
+        .show-menu {
+            right: 0;
         }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a href="{% url 'home' %}">
-                </a>
+            <a class="navbar-brand" href="{% url 'home' %}">팜트래커</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'news' %}">약학뉴스</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'drug_detail' %}">의약품 정보</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}">챗봇</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'mypage' %}">{{ user.username }}님의 마이페이지</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
@@ -80,19 +156,28 @@
         <!-- 사용자 정보 카드 -->
         <div class="my-info-card">
             <h2>내 정보</h2>
-            <p>이름: 홍길동</p>
-            <p>이메일: honggildong@example.com</p>
-            <p>전화번호: 010-1234-5678</p>
-            <button class="btn logout-btn">로그아웃</button>
+            <p>이름: {{ user.username }}</p>
+            <p>이메일: {{ user.email }}</p>
+            <a href="{% url 'logout' %}" class="btn btn-primary">로그아웃</a>
         </div>
 
-        <!-- 주문 내역 카드 -->
-        <div class="my-orders-card">
-            <h2>주문 내역</h2>
-            <ul>
-                <li>주문 번호: 2024001 - 2024년 7월 12일</li>
-                <li>주문 번호: 2024002 - 2024년 7월 13일</li>
-            </ul>
+        <!-- 찜한 의약품 카드 -->
+        <div class="my-drugs-card">
+            <h2>내 의약품</h2>
+            {% if favorite_drugs %}
+                <ul class="list-group">
+                    {% for drug in favorite_drugs %}
+                        <li class="list-group-item">
+                            <h5>{{ drug.item_name }}</h5>
+                            <p>제조사: {{ drug.entp_name }}</p>
+                            <p>성분명: {{ drug.ingr_kor_name }}</p>
+                            <a href="{{ drug.detail_link }}" class="btn btn-primary btn-sm" target="_blank">상세 정보 보기</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>등록된 의약품이 없습니다.</p>
+            {% endif %}
         </div>
     </div>
 

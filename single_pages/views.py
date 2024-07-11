@@ -21,14 +21,53 @@ import numpy as np
 import cv2
 import requests
 from PIL import ImageFont, ImageDraw, Image
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+
 
 
 from .models import ChatbotModel
 # secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
 
+@login_required
 def mypage_view(request):
     # 예시로 사용자 정보를 가져오는 방법입니다. 실제로는 사용자 인증 로직이 필요합니다.
     return render(request, 'mypage.html')
+
+def register_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        if User.objects.filter(username=username).exists():
+            error_message = "이미 사용 중인 아이디입니다."
+            return render(request, 'register.html', {'error_message': error_message})
+
+        user = User.objects.create_user(username=username, password=password)
+        user = authenticate(request, username=username, password=password)
+        login(request, user)
+        return redirect('login')  # 회원가입 후 로그인 페이지로 리디렉션
+
+    return render(request, 'register.html')
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('mypage')  # 로그인 후 마이페이지로 리디렉션
+        else:
+            error_message = "아이디 또는 비밀번호가 잘못되었습니다."
+            return render(request, 'login.html', {'error_message': error_message})
+    return render(request, 'login.html')
+
+def logout_view(request):
+    logout(request)
+    return redirect('home')
+
 
 
 def home_view(request):
@@ -394,7 +433,7 @@ def get_articles(page=1):
         summary = item.select_one('.t1').text.strip() if item.select_one('.t1') else ''
         date = item.select_one('.botm span').text.strip()
         author = item.select('.botm span')[1].text.strip() if len(item.select('.botm span')) > 1 else ''
-        link = "https://www.kpanews.co.kr/" + item.a['href']
+        link = "https://www.kpanews.co.kr/article/" + item.a['href']
         articles.append({
             'title': title,
             'summary': summary,

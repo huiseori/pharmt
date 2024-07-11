@@ -103,7 +103,7 @@
 <!--        </div>-->
         <div class="list-group">
             {% for article in articles %}
-                <a href="{{ article.link }}" class="list-group-item list-group-item-action" target="_blank">
+                <a href="{% url 'news_summary' article_id=forloop.counter0 %}" class="list-group-item list-group-item-action">
                     <h5 class="mb-1">{{ article.title }}</h5>
                     <p class="mb-1">{{ article.summary }}</p>
                     <small>{{ article.date }}</small>
