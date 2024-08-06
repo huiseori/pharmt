@@ -1,9 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>Chatbot</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팜트래커 - 챗봇</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #50C3E7;
+            --secondary-color: #3aa0c9;
+            --text-color: #333;
+            --bg-color: #f8f9fa;
+            --bot-bg-color: #e9f6fb;
+            --user-bg-color: #50C3E7;
+            --input-bg-color: #f8f9fa;
+        }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
         .navbar {
             background-color: #fff;
             box-shadow: 0 2px 4px rgba(0,0,0,.1);
@@ -12,44 +29,118 @@
             font-weight: 700;
             color: var(--primary-color);
         }
+        .content {
+            margin-top: 80px;
+            margin-bottom: 100px;
+        }
         .chat-container {
             max-width: 600px;
             margin: 0 auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 10px;
-            background-color: #f9f9f9;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
         }
         .chat-box {
             max-height: 400px;
-            overflow-y: scroll;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 10px;
-            border: 1px solid #ddd;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: var(--input-bg-color);
+            border-radius: 20px;
         }
         .message {
             margin-bottom: 10px;
+            display: flex;
+            align-items: flex-end;
         }
         .message.user {
-            text-align: right;
+            justify-content: flex-end;
         }
         .message.bot {
-            text-align: left;
+            justify-content: flex-start;
         }
         .message p {
             display: inline-block;
-            padding: 10px;
-            border-radius: 10px;
+            padding: 15px;
+            border-radius: 20px;
             margin: 0;
+            position: relative;
+            max-width: 70%;
+            word-wrap: break-word;
         }
         .message.user p {
-            background-color: #007bff;
+            background-color: var(--user-bg-color);
             color: #fff;
+            border-top-right-radius: 0;
         }
         .message.bot p {
-            background-color: #e9ecef;
+            background-color: var(--bot-bg-color);
+            color: var(--text-color);
+            border-top-left-radius: 0;
+        }
+        .message.bot .icon {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        .form-group {
+            margin-bottom: 0;
+            background-color: var(--input-bg-color);
+            padding: 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .form-group input {
+            border: none;
+            background: transparent;
+            flex-grow: 1;
+            padding: 10px;
+        }
+        .form-group input:focus {
+            outline: none;
+        }
+        .form-group .input-group-append {
+            display: flex;
+            align-items: center;
+        }
+        .form-group button {
+            background-color: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 50%;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .loading {
+            display: none;
+            text-align: center;
+        }
+        .loading span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            animation: loading 0.6s infinite alternate;
+        }
+        .loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes loading {
+            from {
+                transform: scale(1);
+            }
+            to {
+                transform: scale(1.5);
+            }
         }
     </style>
 </head>
@@ -61,66 +152,150 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'news' %}">약학뉴스</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'drug_detail' %}">의약품 정보</a>
+                        <a class="nav-link" href="{% url 'drug_list' %}">의약품 정보</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'chatbot' %}">챗봇</a>
                     </li>
                 </ul>
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        {% if user.is_authenticated %}
+                            <a class="nav-link" href="{% url 'mypage' %}">{{ user.username }}님의 마이페이지</a>
+                        {% else %}
+                            <a class="nav-link" href="{% url 'login' %}">로그인</a>
+                        {% endif %}
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
-    <div class="container my-5">
-    <h1 class="text-center">의약품 정보 챗봇</h1>
-    <div class="chat-container">
-        <div class="chat-box">
-            {% if conversation %}
-                {% for message in conversation %}
-                    {% if message.sender == 'user' %}
-                        <div class="message user">
+
+    <div class="container content">
+        <h1 class="text-center">팜트래커 챗봇</h1>
+        <div class="chat-container">
+            <div class="chat-box" id="chat-box">
+                <div class="message bot">
+                    <i class="fas fa-robot icon"></i>
+                    <p>안녕하세요, 팜트래커 챗봇입니다. 무엇을 도와드릴까요?</p>
+                </div>
+                {% if conversation %}
+                    {% for message in conversation %}
+                        <div class="message {{ message.sender }}">
+                            {% if message.sender == 'bot' %}
+                                <i class="fas fa-robot icon"></i>
+                            {% endif %}
                             <p>{{ message.text }}</p>
                         </div>
-                    {% elif message.sender == 'bot' %}
-                        <div class="message bot">
-                            <p>{{ message.text }}</p>
-                        </div>
-                        {% if message.drug_info %}
-                            <div class="drug-info">
-                                <h4>관련 의약품 정보:</h4>
-                                <ul>
-                                    {% for drug in message.drug_info %}
-                                        <li>
-                                            <strong>{{ drug.item_name }}</strong> (성분: {{ drug.ingr_kor_name }})
-                                            <br>
-                                            <small>{{ drug.se_qesitm }}</small>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    {% endif %}
-                {% endfor %}
+                    {% endfor %}
+                {% endif %}
+                <div class="message bot loading" id="loading-message">
+                    <p>답변을 생성하는 중입니다<span>.</span><span>.</span><span>.</span></p>
+                </div>
+            </div>
+            <form method="post" id="chat-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <input type="text" id="user_input" name="user_input" placeholder="메시지를 입력하세요" required>
+                    <div class="input-group-append">
+                        <span class="input-group-text mic-button" id="mic-button">🎤</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </form>
+            {% if error_message %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    {{ error_message }}
+                </div>
             {% endif %}
         </div>
-        <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="user_input">질문을 입력하세요:</label>
-                <input type="text" id="user_input" name="user_input" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">전송</button>
-        </form>
-        {% if error_message %}
-            <div class="alert alert-danger mt-3" role="alert">
-                {{ error_message }}
-            </div>
-        {% endif %}
     </div>
-</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const chatBox = $('#chat-box');
+            const chatForm = $('#chat-form');
+            const userInput = $('#user_input');
+            const micButton = $('#mic-button');
+
+            chatForm.on('submit', function(e) {
+                e.preventDefault();
+                const message = userInput.val().trim();
+                if (message) {
+                    addMessage('user', message);
+                    sendMessage(message);
+                    userInput.val('');
+                }
+            });
+
+            function addMessage(sender, text) {
+                const messageHtml = `
+                    <div class="message ${sender}">
+                        <p>${text}</p>
+                    </div>
+                `;
+                chatBox.append(messageHtml);
+                chatBox.scrollTop(chatBox[0].scrollHeight);
+            }
+
+            function sendMessage(message) {
+                $.ajax({
+                    url: '/chatbot/',
+                    method: 'POST',
+                    data: JSON.stringify({question: message}),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        addMessage('bot', response.answer);
+                        $('#loading-message').hide(); // Hide the loading message when response is received
+                    },
+                    error: function() {
+                        addMessage('bot', '죄송합니다. 오류가 발생했습니다.');
+                        $('#loading-message').hide(); // Hide the loading message in case of error
+                    }
+                });
+            }
+
+            // 음성 인식 기능
+            if ('webkitSpeechRecognition' in window) {
+                let recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.lang = 'ko-KR';
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    userInput.val(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('음성 인식 오류:', event.error);
+                };
+
+                micButton.on('click', function() {
+                    if (recognition.isReturning) {
+                        recognition.stop();
+                        micButton.text('🎤');
+                    } else {
+                        recognition.start();
+                        micButton.text('🔴');
+                    }
+                });
+
+                recognition.onend = function() {
+                    micButton.text('🎤');
+                    recognition.isReturning = false;
+                };
+            } else {
+                micButton.hide();
+                console.log('Web Speech API가 이 브라우저에서 지원되지 않습니다.');
+            }
+        });
+    </script>
 </body>
 </html>

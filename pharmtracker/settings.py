@@ -129,11 +129,16 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-OPENAI_API_KEY = ''
+OPENAI_API_KEY = 'sk-proj-lNNVV0yUcfVFllhJBv1GT3BlbkFJhaMXeqwt6QSUXD1zWwwL'
 # NAVER_OCR_API_ID='THVmbkVCTU1vamNHVWNzR0N3QkZOa3FrY3Z1T2JZZE4='
 # NAVER_OCR_API_KEY='VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
 PUBLIC_DATA_API_KEY = 'We3PXjbxHr7km3vJpCmXWEaiMARYPCK3a8oIMd4q8BPqP0Dbw04BXt9P6LBlINf9152m5h0WeCQwZUZ0KayQGg%3D%3D'
-DUR_API_KEY = 'v1RI90KCDrEbFktChe7AJrqaQZjthMNnpk5aWRwbuLjTYADawSEBxDlfJu5LBctjCRYs%2BfB4MR0eLuBrIdQB4Q%3D%3D'
+# DUR_API_KEY = 'v1RI90KCDrEbFktChe7AJrqaQZjthMNnpk5aWRwbuLjTYADawSEBxDlfJu5LBctjCRYs%2BfB4MR0eLuBrIdQB4Q%3D%3D'
+# DUR_API_KEY = 'We3PXjbxHr7km3vJpCmXWEaiMARYPCK3a8oIMd4q8BPqP0Dbw04BXt9P6LBlINf9152m5h0WeCQwZUZ0KayQGg%3D%3D'
+DUR_API_KEY = 'H1YY9VYyF8b3U9iejcyMODOEHHkXw0mbzNHfDNKeUQzu67aEBjeIuH9i606FByNpZtSnFQOgyhFcKT%2FanhDdag%3D%3D'
+# DUR_API_URL='http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey=v1RI90KCDrEbFktChe7AJrqaQZjthMNnpk5aWRwbuLjTYADawSEBxDlfJu5LBctjCRYs%2BfB4MR0eLuBrIdQB4Q%3D%3D&itemName=&type=json'
+DUR_API_URL= 'http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04?serviceKey={DUR_API_KEY}&pageNo={page_no}&numOfRows={num_of_rows}&type=xml&item_name={encoded_drug_name}'
+# f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemName={encoded_drug_name}&type=xml"
 
 # Media files (uploads)
 
@@ -145,3 +150,19 @@ import os
 BASE_DIR= os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ALLOWED_HOSTS = ['*']  # 모든 호스트 허용
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {  # 루트 로거
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
