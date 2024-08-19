@@ -1,4 +1,6 @@
 # views.py
+from datetime import date
+
 from django.shortcuts import render
 # from .models import ChatbotModel
 # from openai.error import RateLimitError
@@ -26,6 +28,7 @@ from django.contrib.auth.decorators import login_required
 import openai  # Assuming you're using OpenAI's GPT-3/4 as the chatbot backend
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
+from langchain.chains import conversation
 from langchain.chains import conversation
 from django.contrib import messages
 from django.conf import settings
@@ -61,8 +64,55 @@ from .models import ChatbotModel
 
 @login_required
 def mypage_view(request):
-    # 예시로 사용자 정보를 가져오는 방법입니다. 실제로는 사용자 인증 로직이 필요합니다.
-    return render(request, 'mypage.html')
+    user = request.user
+
+    if request.method == 'POST':
+        if 'gender' in request.POST and 'age' in request.POST:
+            gender = request.POST.get('gender')
+            age = request.POST.get('age')
+            user.first_name = gender
+            user.last_name = age
+            user.save()
+            messages.success(request, '프로필이 업데이트되었습니다.')
+
+        if 'blood_pressure' in request.POST and 'blood_sugar' in request.POST and 'weight' in request.POST:
+            blood_pressure = request.POST.get('blood_pressure')
+            blood_sugar = request.POST.get('blood_sugar')
+            weight = request.POST.get('weight')
+            today = date.today().strftime('%Y-%m-%d')
+
+            health_record = {
+                'blood_pressure': blood_pressure,
+                'blood_sugar': blood_sugar,
+                'weight': weight,
+            }
+
+            # 세션 데이터 초기화 시 딕셔너리로 설정
+            if 'health_records' not in request.session:
+                request.session['health_records'] = {}
+
+            if not isinstance(request.session['health_records'], dict):
+                request.session['health_records'] = {}
+
+            if today not in request.session['health_records']:
+                request.session['health_records'][today] = []
+
+            request.session['health_records'][today].append(health_record)
+            request.session.modified = True
+
+            messages.success(request, '오늘의 건강 기록이 저장되었습니다.')
+
+        return redirect('mypage')
+
+    age_range = range(1, 101)
+    health_records = request.session.get('health_records', {})
+    context = {
+        'age_range': age_range,
+        'user': user,
+        'health_records': health_records,
+    }
+    return render(request, 'mypage.html', context)
+
 
 def register_view(request):
     if request.method == 'POST':
@@ -80,6 +130,7 @@ def register_view(request):
 
     return render(request, 'register.html')
 
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -87,11 +138,12 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('mypage')  # 로그인 후 마이페이지로 리디렉션
+            return redirect('home')  # 로그인 후 홈으로 리디렉션
         else:
             error_message = "아이디 또는 비밀번호가 잘못되었습니다."
             return render(request, 'login.html', {'error_message': error_message})
     return render(request, 'login.html')
+
 
 def logout_view(request):
     logout(request)
@@ -179,6 +231,48 @@ def fetch_medicine_list() -> List[str]:
 
     return medicines
 
+def load_pdf_chunks(pdf_path: str, chunk_size: int = 500, chunk_overlap: int = 50):
+    # PDF 문서를 로드합니다.
+    loader = PyPDFLoader(pdf_path)
+    pages = loader.load()
+
+    # 청크로 나누기
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    chunks = text_splitter.split_documents(pages)
+    return chunks
+
+def add_pdf_to_vectorstore(pdf_path: str, vectorstore, OPENAI_API_KEY: str):
+    # PDF 내용을 청크로 로드합니다.
+    loader = PyPDFLoader(pdf_path)
+    documents = loader.load()
+
+    # 텍스트 분할기를 사용하여 문서를 청크로 나눔
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=900,  # 청크의 크기 설정
+        chunk_overlap=200  # 청크 간 중복 설정
+    )
+    split_docs = text_splitter.split_documents(documents)
+
+    # 문서에서 텍스트를 추출
+    texts = [doc.page_content for doc in split_docs]
+
+    # 문서를 벡터 저장소에 추가
+    vectorstore.add_texts(texts)
+    print(f"벡터 저장소에 {len(texts)}개의 텍스트 청크가 추가되었습니다.")
+
+def initialize_data():
+    global vectorstore
+
+    # 벡터 저장소가 초기화되지 않았으면 초기화
+    if vectorstore is None:
+        vectorstore = FAISS.from_texts(["초기화 문서"], cached_embeddings)
+
+    # PDF 데이터를 벡터 저장소에 추가
+    pdf_path = r"C:\Users\se711\PycharmProjects\graduation-project\uploads\test_1.pdf"  # Raw String 사용
+    add_pdf_to_vectorstore(pdf_path, vectorstore, OPENAI_API_KEY)
+
+# 앱 시작 시 초기화 호출
+initialize_data()
 
 def initialize_medicine_list():
     """
@@ -332,13 +426,36 @@ def retrieve_relevant_context(question: str) -> Tuple[str, Optional[str]]:
 
     print(f"추출된 의약품 이름: {medicine_name}")
 
-    docs = vectorstore.similarity_search(medicine_name, k=3)
-    print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs)}")
+    # docs_medicine = vectorstore.similarity_search(medicine_name, k=3)
+    #print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs)}")
+    docs_medicine = []
+    if medicine_name:
+        docs_medicine = vectorstore.similarity_search(medicine_name, k=3)
+        print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs_medicine)}")
+
+    # PDF 데이터와 관련된 문서 검색
+    docs_pdf = vectorstore.similarity_search(question, k=2)
+    print(f"질문에 대해 검색된 PDF 문서 수: {len(docs_pdf)}")
+
+    # # PDF 문서만으로 문맥을 생성하여 테스트
+    # if docs_pdf:
+    #     context = "\n".join([doc.page_content for doc in docs_pdf])
+    #     print(f"PDF에서 생성된 문맥:\n{context[:500]}...")
+    #     return context, None  # 임시로 약물 이름 없이 테스트
+
+    # 두 검색 결과를 결합
+    docs = docs_medicine + docs_pdf
+    if not docs:
+        print("관련 문서를 찾을 수 없습니다.")
+        return "관련 문서를 찾을 수 없습니다.", None
+
+    # context = "\n".join([doc.page_content for doc in docs])
+    # print(f"결합된 문맥:\n{context[:500]}...")
+    # return context, None
 
     top_item_name = None
-    if docs:
-        top_doc = docs[0].page_content
-        lines = top_doc.splitlines()
+    for doc in docs_medicine:
+        lines = doc.page_content.splitlines()
         for line in lines:
             if line.startswith("품목명:"):
                 top_item_name = line.split(":")[1].strip()
@@ -394,6 +511,12 @@ rag_chain = (
     | llm
 )
 
+def generate_independent_response(question):
+    prompt = f"질문에 대해 자세하고 유익한 답변을 생성해 주세요:\n\n{question}"
+    response = llm.generate(prompt, max_tokens=150)
+    return response.content
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def chatbot_view(request):
@@ -402,21 +525,27 @@ def chatbot_view(request):
             body = json.loads(request.body.decode("utf-8"))
             question = body.get("question")
             if not question:
-                return JsonResponse({"error": "질문이 필요합니다."}, status=100)
+                return JsonResponse({"error": "질문이 필요합니다."}, status=400)
 
             context, extracted_drug_name = retrieve_relevant_context(question)
-            print(f"검색된 컨텍스트: {context[:1000]}...")  # 디버깅을 위한 컨텍스트 출력
+            # print(f"검색된 컨텍스트: {context[:1000]}...")  # 디버깅을 위한 컨텍스트 출력
+            if "관련 문서를 찾을 수 없습니다." in context:
+                # Context가 충분하지 않을 때 독립적인 답변 생성
+                independent_response = generate_independent_response(question)
+                return JsonResponse({"answer": independent_response})
 
+            # 기존의 RAG 로직을 사용하여 답변 생성
             result = rag_chain.invoke({"question": question, "context": context})
-            print(f"생성된 답변: {result.content}")
-            print(f"현재 벡터 저장소의 크기: {vectorstore.index.ntotal}")
+
 
             # 링크 버튼 추가
             if extracted_drug_name:
                 result.content = add_button_to_response(result.content, extracted_drug_name)
                 print(f"Added button for drug name: {extracted_drug_name}")
 
+            print(f"생성된 답변: {result.content}")
             return JsonResponse({"answer": result.content})
+            print(f"현재 벡터 저장소의 크기: {vectorstore.index.ntotal}")
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "잘못된 JSON 형식입니다."}, status=400)
@@ -553,6 +682,13 @@ def ocr_process(request):
     #return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def drug_list_view(request):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # AJAX 요청 처리 (자동완성)
+        drug_name = request.GET.get('term', '')
+        drugs = get_drug_info(drug_name, settings.DUR_API_KEY)
+        suggestions = [drug['ITEM_NAME'] for drug in drugs] if drugs else []
+        return JsonResponse(suggestions, safe=False)
+
     drug_info = None
     error_message = None
 
@@ -582,7 +718,7 @@ def drug_list_view(request):
 
                         detail_link = f"/drug_detail/{item_seq}/"  # 새로운 상세 정보 페이지로의 링크
                         image_url = get_drug_image(item_name)  # 약품 이미지 URL 가져오기
-                        print(f"Image URL for {item_name}: {image_url}")  # 디버깅용 출력
+                        # print(f"Image URL for {item_name}: {image_url}")  # 디버깅용 출력
 
                         drug_list.append({
                             "item_name": item_name,
@@ -604,18 +740,18 @@ def drug_list_view(request):
     return render(request, 'drug_list.html', {'drug_info': drug_info, 'error_message': error_message})
 
 def get_drug_image(drug_name):
-    api_key = settings.DUR_API_KEY  # 공공데이터포털에서 발급받은 인코딩된 인증 키
+    api_key = 'v1RI90KCDrEbFktChe7AJrqaQZjthMNnpk5aWRwbuLjTYADawSEBxDlfJu5LBctjCRYs%2BfB4MR0eLuBrIdQB4Q%3D%3D'  # 공공데이터포털에서 발급받은 인코딩된 인증 키
     encoded_drug_name = urllib.parse.quote(drug_name)
     url = f"http://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService01/getMdcinGrnIdntfcInfoList01?serviceKey={api_key}&item_name={encoded_drug_name}&pageNo=1&numOfRows=3&type=xml"
     response = requests.get(url, verify=False)  # SSL 검증 비활성화
 
     if response.status_code == 200:
-        print(f"Image API Response: {response.content}")  # 디버깅용 출력
+        # print(f"Image API Response: {response.content}")  # 디버깅용 출력
         soup = BeautifulSoup(response.content, "lxml-xml")
         item = soup.find("item")
         if item:
             image_url = item.find("ITEM_IMAGE").text if item.find("ITEM_IMAGE") else None
-            print(f"Extracted Image URL: {image_url}")  # 디버깅용 출력
+            # print(f"Extracted Image URL: {image_url}")  # 디버깅용 출력
             return image_url
     return None
 
@@ -644,6 +780,32 @@ def drug_detail_view(request, item_seq):
         drug_detail = None
 
     return render(request, 'drug_detail.html', {'drug_detail': drug_detail})
+
+def get_drug_info(drug_name, api_key):
+    print(f"Fetching drug info for: {drug_name}")
+    encoded_drug_name = urllib.parse.quote(drug_name)
+    url = f"http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnInq05?serviceKey={api_key}&pageNo=1&numOfRows=10&type=xml&item_name={encoded_drug_name}"
+    response = requests.get(url, verify=False)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "lxml-xml")
+        items = soup.find_all("item")
+        drugs = []
+        for item in items:
+            drug = {
+                'ITEM_NAME': item.find("ITEM_NAME").text if item.find("ITEM_NAME") else "",
+                'ITEM_SEQ': item.find("ITEM_SEQ").text if item.find("ITEM_SEQ") else "",
+                'ENTP_NAME': item.find("ENTP_NAME").text if item.find("ENTP_NAME") else "",
+                'SPCLTY_PBLC': item.find("SPCLTY_PBLC").text if item.find("SPCLTY_PBLC") else "",
+                'PRDUCT_TYPE': item.find("PRDUCT_TYPE").text if item.find("PRDUCT_TYPE") else "",
+                'ITEM_INGR_NAME': item.find("ITEM_INGR_NAME").text if item.find("ITEM_INGR_NAME") else ""
+            }
+            print(f"Drug found: {drug}")
+            drugs.append(drug)
+        return drugs
+    else:
+        print("Failed to fetch drug info.")
+        return None
 
 
 # def drug_detail_view(request):
