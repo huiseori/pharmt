@@ -20,13 +20,27 @@
             background: #f8f9fa;
             color: var(--text-color);
         }
+        @font-face {
+        font-family: 'SUIT-Regular';
+        src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_suit@1.0/SUIT-Regular.woff2') format('woff2');
+        font-weight: 800;
+        font-style: normal;
+        }
+        @font-face {
+            font-family: 'GangwonEduPowerExtraBoldA';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEduPowerExtraBoldA.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
         .navbar {
             background-color: #fff;
             box-shadow: 0 2px 4px rgba(0,0,0,.1);
             transition: background-color 0.3s ease;
         }
         .navbar-brand {
-            font-weight: 700;
+            font-family: 'GangwonEduPowerExtraBoldA';
+            font-weight: 600;
+            font-size: 1.6rem;
             color: var(--primary-color);
         }
         .navbar-nav .nav-link {
@@ -76,6 +90,7 @@
             background-color: var(--card-hover-bg-color);
         }
         .drug-info h2 {
+            font-family: 'SUIT-Regular';
             margin-top: 0;
             color: var(--text-color);
         }
@@ -146,6 +161,12 @@
         }
         .footer a.active {
             color: var(--primary-color);
+        }
+        .disclaimer {
+            color: #666;  /* 회색 글씨 */
+            font-size: 0.875rem;  /* 약간 작은 글씨 크기 */
+            text-align: center;
+            margin-top: 20px;
         }
         .page-title {
             font-size: 2.5rem;
@@ -267,11 +288,14 @@
             margin-left: 10px;
         }
         .drug-info img {
-            max-width: 150px;  /* 이미지 최대 너비 설정 */
+            max-width: 300px;  /* 이미지 최대 너비 설정 */
             height: auto;  /* 비율에 맞게 높이 자동 설정 */
             display: block;  /* 블록 요소로 설정하여 아래 여백 조정 */
         }
     </style>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
@@ -306,10 +330,10 @@
     </nav>
 
     <div class="container content">
-        <h1 class="page-title">
-            <i class="fas fa-pills icon"></i>
-            <span>의약품 정보 검색</span>
-        </h1>
+<!--        <h1 class="page-title">-->
+<!--            <i class="fas fa-pills icon"></i>-->
+<!--            <span></span>-->
+<!--        </h1>-->
         <div class="search-container">
             <form method="get" class="search-bar">
                 <input type="text" id="drug_name" name="drug_name" placeholder="검색할 의약품명을 입력해주세요." required>
@@ -335,53 +359,74 @@
         {% elif error_message %}
             <p class="error-message">{{ error_message }}</p>
         {% endif %}
+        <p class="disclaimer">위 데이터는 식품의약품안전처 및 건강보험심사평가원 등의 국가 행정기관 공공 데이터를 기반으로 제공됩니다.</p>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
-            const drugInfos = document.querySelectorAll('.drug-info');
-            drugInfos.forEach((info, index) => {
-                info.style.animationDelay = `${0.1 * (index + 1)}s`;
-            });
-
-            const searchInput = document.querySelector('#drug_name');
-            searchInput.addEventListener('focus', () => {
-                document.querySelector('.search-bar').style.boxShadow = '0 0 0 3px rgba(80, 195, 231, 0.3)';
-            });
-            searchInput.addEventListener('blur', () => {
-                document.querySelector('.search-bar').style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            });
-
-            // Voice search functionality
-            const voiceSearchBtn = document.getElementById('voice-search-btn');
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'ko-KR';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
-            const recordingIndicator = document.getElementById('recording-indicator');
-
-            voiceSearchBtn.addEventListener('click', () => {
-                recognition.start();
-                recordingIndicator.style.display = 'inline';
-            });
-
-            recognition.addEventListener('result', (event) => {
-                const speechResult = event.results[0][0].transcript;
-                searchInput.value = speechResult;
-                searchInput.form.submit();
-            });
-
-            recognition.addEventListener('speechend', () => {
-                recognition.stop();
-                recordingIndicator.style.display = 'none';
-            });
-
-            recognition.addEventListener('error', (event) => {
-                console.error('Speech recognition error detected: ' + event.error);
-                recordingIndicator.style.display = 'none';
-            });
+    $(document).ready(function() {
+        $("#drug_name").autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'drug_list' %}",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response(data);
+                    }
+                });
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                $("#drug_name").val(ui.item.value);
+                $("form").submit();
+            }
         });
+
+        const drugInfos = document.querySelectorAll('.drug-info');
+        drugInfos.forEach((info, index) => {
+            info.style.animationDelay = `${0.1 * (index + 1)}s`;
+        });
+
+        const searchInput = document.querySelector('#drug_name');
+        searchInput.addEventListener('focus', () => {
+            document.querySelector('.search-bar').style.boxShadow = '0 0 0 3px rgba(80, 195, 231, 0.3)';
+        });
+        searchInput.addEventListener('blur', () => {
+            document.querySelector('.search-bar').style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        });
+
+        // Voice search functionality
+        const voiceSearchBtn = document.getElementById('voice-search-btn');
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'ko-KR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        const recordingIndicator = document.getElementById('recording-indicator');
+
+        voiceSearchBtn.addEventListener('click', () => {
+            recognition.start();
+            recordingIndicator.style.display = 'inline';
+        });
+
+        recognition.addEventListener('result', (event) => {
+            const speechResult = event.results[0][0].transcript;
+            searchInput.value = speechResult;
+            searchInput.form.submit();
+        });
+
+        recognition.addEventListener('speechend', () => {
+            recognition.stop();
+            recordingIndicator.style.display = 'none';
+        });
+
+        recognition.addEventListener('error', (event) => {
+            console.error('Speech recognition error detected: ' + event.error);
+            recordingIndicator.style.display = 'none';
+        });
+    });
     </script>
 
     <a href="{% url 'ocr' %}" class="camera-btn" title="이미지로 약품 검색">

@@ -8,7 +8,7 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.home_view, name='home'),
+    path('', views.splash_view, name='home'),
     path('home/', views.home_view, name='home'),
     path('chatbot/', views.chatbot_view, name='chatbot'),
     path('ocr/', views.ocr_view, name='ocr'),
@@ -22,5 +22,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
+    path('pharmacy_list/', views.pharmacy_list_view, name='pharmacy_list'),
+path('drug_interaction/', views.drug_interaction_view, name='drug_interaction'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

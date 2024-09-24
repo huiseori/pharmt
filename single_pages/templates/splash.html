@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to PharmTracker</title>
+    <style>
+         @font-face {
+            font-family: 'GangwonEduPowerExtraBoldA';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEduPowerExtraBoldA.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #ffffff;
+        }
+        .splash-container {
+            text-align: center;
+        }
+        .splash-gif {
+            width: 800px;  /* GIF 크기에 맞게 조정 */
+            height: auto;
+        }
+        .splash-text {
+            font-family: 'GangwonEduPowerExtraBoldA', sans-serif;
+            color: #50C3E7;
+            font-size: 6rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <img src="{% static 'single_pages/images/medicine.gif' %}" alt="Loading" class="splash-gif">
+         <h1 class="splash-text">팜트래커</h1>
+        <p>loading...</p>
+    </div>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = "{% url 'home' %}";
+        }, 3000);  // 3초 후 메인 페이지로 리다이렉트
+    </script>
+</body>
+</html>

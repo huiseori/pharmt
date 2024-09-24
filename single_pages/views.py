@@ -1,6 +1,7 @@
 # views.py
 from datetime import date
 
+from django.core.cache import cache
 from django.shortcuts import render
 # from .models import ChatbotModel
 # from openai.error import RateLimitError
@@ -55,14 +56,20 @@ import asyncio
 import aiohttp
 from django.utils.html import escape
 from urllib.parse import quote
-
+from urllib.parse import unquote
+from io import BytesIO
+import re
+import base64
 
 
 
 from .models import ChatbotModel
-# secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
 
-@login_required
+def splash_view(request):
+    return render(request, 'splash.html')
+
+
+# @login_required
 def mypage_view(request):
     user = request.user
 
@@ -158,7 +165,7 @@ OPENAI_API_KEY = settings.OPENAI_API_KEY
 # DUR 품목정보 API 설정
 DUR_API_KEY = settings.DUR_API_KEY
 # RAG 설정
-llm = ChatOpenAI(temperature=0.1, openai_api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(temperature=0.1, openai_api_key=OPENAI_API_KEY, model="gpt-4o-mini")
 cache_dir = LocalFileStore("./.cache/practice/")
 embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
@@ -175,7 +182,7 @@ okt = Okt()
 vectorstore = None
 
 # RAG 설정
-llm = ChatOpenAI(temperature=0.1, openai_api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(temperature=0.1, openai_api_key=OPENAI_API_KEY, model="gpt-4o-mini")
 cache_dir = LocalFileStore("./.cache/practice/")
 embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
@@ -231,6 +238,49 @@ def fetch_medicine_list() -> List[str]:
 
     return medicines
 
+# def load_pdf_chunks(pdf_path: str, chunk_size: int = 500, chunk_overlap: int = 50):
+#     # PDF 문서를 로드합니다.
+#     loader = PyPDFLoader(pdf_path)
+#     pages = loader.load()
+#
+#     # 청크로 나누기
+#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+#     chunks = text_splitter.split_documents(pages)
+#     return chunks
+#
+# def add_pdf_to_vectorstore(pdf_path: str, vectorstore, OPENAI_API_KEY: str):
+#     # PDF 내용을 청크로 로드합니다.
+#     loader = PyPDFLoader(pdf_path)
+#     documents = loader.load()
+#
+#     # 텍스트 분할기를 사용하여 문서를 청크로 나눔
+#     text_splitter = RecursiveCharacterTextSplitter(
+#         chunk_size=900,  # 청크의 크기 설정
+#         chunk_overlap=200  # 청크 간 중복 설정
+#     )
+#     split_docs = text_splitter.split_documents(documents)
+#
+#     # 문서에서 텍스트를 추출
+#     texts = [doc.page_content for doc in split_docs]
+#
+#     # 문서를 벡터 저장소에 추가
+#     vectorstore.add_texts(texts)
+#     print(f"벡터 저장소에 {len(texts)}개의 텍스트 청크가 추가되었습니다.")
+#
+# def initialize_data():
+#     global vectorstore
+#
+#     # 벡터 저장소가 초기화되지 않았으면 초기화
+#     if vectorstore is None:
+#         vectorstore = FAISS.from_texts(["초기화 문서"], cached_embeddings)
+#
+#     # PDF 데이터를 벡터 저장소에 추가
+#     pdf_path = r"C:\Users\se711\PycharmProjects\graduation-project\uploads\test_1.pdf"  # Raw String 사용
+#     add_pdf_to_vectorstore(pdf_path, vectorstore, OPENAI_API_KEY)
+#
+# # 앱 시작 시 초기화 호출
+# initialize_data()
+
 def load_pdf_chunks(pdf_path: str, chunk_size: int = 500, chunk_overlap: int = 50):
     # PDF 문서를 로드합니다.
     loader = PyPDFLoader(pdf_path)
@@ -241,7 +291,7 @@ def load_pdf_chunks(pdf_path: str, chunk_size: int = 500, chunk_overlap: int = 5
     chunks = text_splitter.split_documents(pages)
     return chunks
 
-def add_pdf_to_vectorstore(pdf_path: str, vectorstore, OPENAI_API_KEY: str):
+def add_pdf_to_vectorstore(pdf_path: str, vectorstore):
     # PDF 내용을 청크로 로드합니다.
     loader = PyPDFLoader(pdf_path)
     documents = loader.load()
@@ -249,7 +299,7 @@ def add_pdf_to_vectorstore(pdf_path: str, vectorstore, OPENAI_API_KEY: str):
     # 텍스트 분할기를 사용하여 문서를 청크로 나눔
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=900,  # 청크의 크기 설정
-        chunk_overlap=200  # 청크 간 중복 설정
+        chunk_overlap=100  # 청크 간 중복 설정
     )
     split_docs = text_splitter.split_documents(documents)
 
@@ -260,6 +310,10 @@ def add_pdf_to_vectorstore(pdf_path: str, vectorstore, OPENAI_API_KEY: str):
     vectorstore.add_texts(texts)
     print(f"벡터 저장소에 {len(texts)}개의 텍스트 청크가 추가되었습니다.")
 
+def add_pdfs_to_vectorstore(pdf_paths: List[str], vectorstore):
+    for pdf_path in pdf_paths:
+        add_pdf_to_vectorstore(pdf_path, vectorstore)
+
 def initialize_data():
     global vectorstore
 
@@ -267,12 +321,17 @@ def initialize_data():
     if vectorstore is None:
         vectorstore = FAISS.from_texts(["초기화 문서"], cached_embeddings)
 
-    # PDF 데이터를 벡터 저장소에 추가
-    pdf_path = r"C:\Users\se711\PycharmProjects\graduation-project\uploads\test_1.pdf"  # Raw String 사용
-    add_pdf_to_vectorstore(pdf_path, vectorstore, OPENAI_API_KEY)
+    # 여러 PDF 파일을 벡터 저장소에 추가
+    pdf_paths = [
+        r"C:\Users\se711\PycharmProjects\graduation-project\uploads\test_1.pdf",
+        r"C:\Users\se711\PycharmProjects\graduation-project\uploads\twynsta.pdf"
+        # 필요에 따라 추가 PDF 파일 경로 추가
+    ]
+    add_pdfs_to_vectorstore(pdf_paths, vectorstore)
 
 # 앱 시작 시 초기화 호출
 initialize_data()
+
 
 def initialize_medicine_list():
     """
@@ -380,7 +439,7 @@ async def load_initial_data_async():
     encoded_drug_name = urllib.parse.quote("")  # 모든 품목 가져오기
     num_of_rows = 100  # 한 페이지에 100개의 결과
     page_no = 1  # 첫 번째 페이지
-    max_pages = 100  # 최대 10페이지
+    max_pages = 10  # 최대 10페이지
     all_processed_data = []
 
     async with aiohttp.ClientSession() as session:
@@ -430,7 +489,7 @@ def retrieve_relevant_context(question: str) -> Tuple[str, Optional[str]]:
     #print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs)}")
     docs_medicine = []
     if medicine_name:
-        docs_medicine = vectorstore.similarity_search(medicine_name, k=3)
+        docs_medicine = vectorstore.similarity_search(medicine_name, k=2)
         print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs_medicine)}")
 
     # PDF 데이터와 관련된 문서 검색
@@ -461,7 +520,7 @@ def retrieve_relevant_context(question: str) -> Tuple[str, Optional[str]]:
                 top_item_name = line.split(":")[1].strip()
                 break
 
-    context = "\n".join([doc.page_content for doc in docs])
+    context = "\n".join([doc.page_content[:1000] for doc in docs])
     return context, top_item_name
 
 def add_button_to_response(result_content: str, drug_name: Optional[str]) -> str:
@@ -494,8 +553,7 @@ prompt = ChatPromptTemplate.from_messages([
     4. 질문의 맥락을 고려하여, 관련된 추가 정보나 조언을 제공하세요.
     5. 약물 복용과 관련된 주의사항을 강조하고, 의사나 약사와 상담할 것을 권장하세요.
     6. 건강에 도움이 되는 일반적인 조언(예: 규칙적인 운동, 균형 잡힌 식단)도 함께 제공하세요.
-    7. 필요한 경우 반복해서 설명하고, 이해했는지 확인하는 질문을 해 주세요.
-    8. 답변은 간결하게 5문장 이하로 답변해 주세요.
+    8. 답변은 간결하게 250자 이하로 답변해 주세요.
     9. 필요한 경우 의약품 성분을 포함해서 답변해 주세요.
     10.항상 존댓말을 사용하고, 따뜻하고 공감적인 톤으로 대화하세요.
     아래의 정보를 바탕으로 질문에 정확하고 이해하기 쉽게 답변해 주세요:
@@ -559,11 +617,11 @@ def chatbot_view(request):
 
 
 
-# api_url = 'https://f2njh1jvk0.apigw.ntruss.com/custom/v1/31289/20f7f9592ec261660e6a41d64f3cd240d068f9e641c7fe728341b9a2e0979ff0/general'
-# secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
+#api_url = 'https://f2njh1jvk0.apigw.ntruss.com/custom/v1/31289/20f7f9592ec261660e6a41d64f3cd240d068f9e641c7fe728341b9a2e0979ff0/general'
+#secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
 
-api_url = 'https://bi9fchpejl.apigw.ntruss.com/custom/v1/31331/3f422bc603539f1d16208ebac83f049343eccc4d8c53e11052a0ce0e1ce01490/general'
-secret_key = 'VWdFWmp3SkVYdkRNdFJTWFRQdlRXQ3hiYlVoQmNlWFo='
+api_url = 'https://rfsoe9oge0.apigw.ntruss.com/custom/v1/33758/04551f065f17fa952a90b63ee0c5a01adda5ab1c7e8b4d2a3cf37ccaf94134ee/general'
+secret_key = 'YldyamVGd29WUU9VSUJSckJPT1JZcHdkTFR3cUJVVko='
 
 def ocr_view(request):
     return render(request, 'ocr.html')
@@ -587,99 +645,139 @@ def put_text(image, text, x, y, color=(0, 255, 0), font_size=22):
 
     return opencv_image
 
+@csrf_exempt
 def ocr_process(request):
-    if request.method == 'POST' and request.FILES['image']:
-        image_file = request.FILES['image']
-        path = os.path.join('uploads', image_file.name)
-        with open(path, 'wb') as f:
-            for chunk in image_file.chunks():
-                f.write(chunk)
+    if request.method == 'POST':
+        try:
+            print("Processing started...")
 
-        # 파일이 제대로 업로드되었는지 확인
-        if not os.path.exists(path):
-            return JsonResponse({'error': 'File upload failed.'}, status=500)
+            path = None
 
-        files = [('file', open(path, 'rb'))]
+            # FormData 방식 (앨범 업로드)
+            if 'image' in request.FILES:
+                image_file = request.FILES['image']
+                path = os.path.join('uploads', image_file.name)
+                with open(path, 'wb') as f:
+                    for chunk in image_file.chunks():
+                        f.write(chunk)
+                print(f"Image uploaded and saved at {path}")
 
-        request_json = {
-            'images': [{'format': 'jpg', 'name': 'demo'}],
-            'requestId': str(uuid.uuid4()),
-            'version': 'V2',
-            'timestamp': int(round(time.time() * 1000))
-        }
+            # JSON 방식 (카메라 캡처)
+            elif request.body:
+                try:
+                    body_data = json.loads(request.body.decode('utf-8'))
+                    image_data = body_data.get('image_data')
+                    if image_data:
+                        image_data = base64.b64decode(image_data)
+                        img = Image.open(BytesIO(image_data))
+                        path = os.path.join('uploads', f'{uuid.uuid4()}.jpg')
+                        img.save(path, 'JPEG')
+                        print(f"Captured image saved at {path}")
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"Failed to decode JSON or process image data: {str(e)}")
+                    return JsonResponse({'error': 'Invalid image data.'}, status=400)
+            else:
+                print("No image provided.")
+                return JsonResponse({'error': 'No image provided.'}, status=400)
 
-        payload = {'message': json.dumps(request_json).encode('UTF-8')}
+            # 파일이 제대로 업로드되었는지 확인
+            if not path or not os.path.exists(path):
+                print("File upload failed.")
+                return JsonResponse({'error': 'File upload failed.'}, status=500)
 
-        headers = {
-            'X-OCR-SECRET': secret_key,
-        }
+            print(f"File exists at {path}. Proceeding with OCR...")
 
-        response = requests.post(api_url, headers=headers, data=payload, files=files)
-        result = response.json()
+            files = [('file', open(path, 'rb'))]
 
-        img = cv2.imread(path)
-        # 이미지 로드 확인
-        if img is None:
-            return JsonResponse({'error': 'Failed to read image file.'}, status=500)
+            request_json = {
+                'images': [{'format': 'jpg', 'name': 'demo'}],
+                'requestId': str(uuid.uuid4()),
+                'version': 'V2',
+                'timestamp': int(round(time.time() * 1000))
+            }
 
-        roi_img = img.copy()
+            payload = {'message': json.dumps(request_json).encode('UTF-8')}
 
-        # 인식된 모든 텍스트 추출
-        recognized_texts = []
+            headers = {
+                'X-OCR-SECRET': secret_key,
+            }
 
-        for field in result['images'][0]['fields']:
-            text = field['inferText']
-            vertices_list = field['boundingPoly']['vertices']
-            pts = [tuple(vertice.values()) for vertice in vertices_list]
-            topLeft = [int(_) for _ in pts[0]]
-            topRight = [int(_) for _ in pts[1]]
-            bottomRight = [int(_) for _ in pts[2]]
-            bottomLeft = [int(_) for _ in pts[3]]
+            response = requests.post(api_url, headers=headers, data=payload, files=files)
+            result = response.json()
 
-            cv2.line(roi_img, topLeft, topRight, (0, 255, 0), 2)
-            cv2.line(roi_img, topRight, bottomRight, (0, 255, 0), 2)
-            cv2.line(roi_img, bottomRight, bottomLeft, (0, 255, 0), 2)
-            cv2.line(roi_img, bottomLeft, topLeft, (0, 255, 0), 2)
-            roi_img = put_text(roi_img, text, topLeft[0], topLeft[1] - 10, font_size=30)
+            print("OCR API response received.")
 
-            recognized_texts.append(text)  # 모든 인식된 텍스트 추가
-            # print(f"Recognized Texts: {recognized_texts}")  # 디버깅: 인식된 텍스트 출력
+            # 이미지 파일 읽기
+            img = cv2.imread(path)
 
-        # Save the processed image to serve it to the frontend
-        processed_image_path = os.path.join('uploads', 'processed_' + image_file.name)
-        cv2.imwrite(processed_image_path, roi_img)
+            # 이미지 로드 확인
+            if img is None:
+                print("Failed to read image file.")
+                return JsonResponse({'error': 'Failed to read image file.'}, status=500)
 
-        # 검색 결과가 있는 텍스트 필터링
-        valid_texts = []
-        for text in recognized_texts:
-            encoded_text = urllib.parse.quote(text)
-            api_key = settings.DUR_API_KEY  # 공공데이터포털에서 발급받은 인증 키
-            # url = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemName={encoded_text}&type=xml"
-            url = f"http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04?serviceKey={api_key}&type=xml&item_name={encoded_text}"
-            response = requests.get(url)
+            roi_img = img.copy()
 
-            # print(f"API URL: {url}")  # 디버깅: 호출한 API URL 출력
-            # print(f"API Response Status: {response.status_code}")  # 디버깅: API 응답 코드 출력
+            # 인식된 모든 텍스트 추출
+            recognized_texts = []
 
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, "html.parser")
-                if soup.find_all("item"):
-                    valid_texts.append(text)  # 검색 결과가 있는 텍스트 추가
+            for field in result['images'][0]['fields']:
+                text = field['inferText']
+                vertices_list = field['boundingPoly']['vertices']
+                pts = [tuple(vertice.values()) for vertice in vertices_list]
+                topLeft = [int(_) for _ in pts[0]]
+                topRight = [int(_) for _ in pts[1]]
+                bottomRight = [int(_) for _ in pts[2]]
+                bottomLeft = [int(_) for _ in pts[3]]
 
-        print(f"Valid Texts: {valid_texts}")  # 디버깅: 유효한 텍스트 출력
+                cv2.line(roi_img, topLeft, topRight, (0, 255, 0), 2)
+                cv2.line(roi_img, topRight, bottomRight, (0, 255, 0), 2)
+                cv2.line(roi_img, bottomRight, bottomLeft, (0, 255, 0), 2)
+                cv2.line(roi_img, bottomLeft, topLeft, (0, 255, 0), 2)
+                roi_img = put_text(roi_img, text, topLeft[0], topLeft[1] - 10, font_size=30)
 
-        if valid_texts:
-            # 검색 결과가 있는 첫 번째 유효 텍스트로 리다이렉트
-            return redirect(f'/drug_list?drug_name={urllib.parse.quote(valid_texts[0])}')
+                recognized_texts.append(text)  # 모든 인식된 텍스트 추가
 
-        # 유효한 검색 결과가 없을 경우 오류 메시지 반환
-        return JsonResponse({'error': 'No valid drug information found in OCR result.'}, status=404)
+            print(f"Recognized Texts: {recognized_texts}")
 
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+            # 처리된 이미지를 저장하여 프론트엔드에 제공
+            processed_image_path = os.path.join('uploads', 'processed_' + os.path.basename(path))
+            cv2.imwrite(processed_image_path, roi_img)
+            print(f"Processed image saved at {processed_image_path}")
 
-    # return render(request, 'ocr.html', {'processed_image_path': '/' + processed_image_path})
+            # 검색 결과가 있는 텍스트 필터링
+            # 유효한 텍스트 필터링 조건
+            valid_texts = []
+            korean_pattern = re.compile(r'^[가-힣0-9]+$')  # 한글과 숫자만 포함된 텍스트 확인용 정규식
 
-    #return JsonResponse({'error': 'Invalid request'}, status=400)
+            for text in recognized_texts:
+                if korean_pattern.match(text) and len(text) >= 2:  # 한국어이며 두 글자 이상인 경우
+                    encoded_text = urllib.parse.quote_plus(text)
+                    api_key = settings.DUR_API_KEY
+                    url = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemName={encoded_text}&type=xml"
+                    response = requests.get(url)
+
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.content, "html.parser")
+                        if soup.find_all("item"):  # 검색 결과가 있는 경우
+                            valid_texts.append(text)
+
+            print(f"Valid Texts: {valid_texts}")
+
+            # 검색 결과가 있는 첫 번째 유효 텍스트로 리다이렉트 URL 생성
+            if valid_texts:
+                redirect_url = f'/drug_list?drug_name={(valid_texts[0])}'
+                print(f"Redirecting to: {redirect_url}")
+                return JsonResponse({'redirect': redirect_url})
+
+            print("No valid drug information found.")
+            return JsonResponse({'error': 'No valid drug information found in OCR result.'}, status=404)
+
+        except Exception as e:
+            print(f"Error occurred during OCR processing: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+        print("Invalid request method.")
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def drug_list_view(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -1019,5 +1117,286 @@ def news_summary_view(request, article_id):
     article['full_summary'] = full_summary
     return render(request, 'news_summary.html', {'article': article})
 
+def get_pharmacies(search_query='', page=1, num_of_rows=10):
+    base_url = "http://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getParmacyListInfoInqire"
+    params = {
+        'serviceKey': settings.DUR_API_KEY,
+        'QT': '1',  # Query type parameter
+        'ORD': 'NAME',
+        'pageNo': page,
+        'numOfRows': num_of_rows,
+    }
 
+    # 검색 쿼리를 URL 디코딩
+    search_query = unquote(search_query).strip()
+
+    # 지역과 약국명을 구분
+    name_part = ''
+    region_part = ''
+
+    # 검색 쿼리가 "약국명 (주소)" 형식일 경우
+    if '(' in search_query and search_query.endswith(')'):
+        name_part, full_address = search_query.split('(', 1)
+        name_part = name_part.strip()
+        full_address = full_address.rsplit(')', 1)[0].strip()
+
+        # 주소에서 지역만 추출 (예: 서울특별시)
+        if ' ' in full_address:
+            region_part = full_address.split(' ')[0]
+
+    # 사용자가 입력한 쿼리가 지역명으로 시작하면 지역으로 설정
+    elif ' ' in search_query:
+        potential_region = search_query.split(' ')[0]
+        # 한국의 일반적인 시/도 이름에 해당하는 경우
+        if potential_region.endswith('시') or potential_region.endswith('도'):
+            region_part = potential_region
+            name_part = search_query.replace(region_part, '').strip()
+        else:
+            name_part = search_query
+
+    else:
+        name_part = search_query
+
+    # 파라미터 설정
+    if name_part:
+        params['QN'] = name_part  # 약국명으로 검색
+    if region_part:
+        params['Q0'] = region_part  # 지역으로 검색
+
+    # URL 생성
+    url = (f"{base_url}?serviceKey={params['serviceKey']}"
+           f"&QT={params['QT']}&ORD={params['ORD']}&pageNo={params['pageNo']}"
+           f"&numOfRows={params['numOfRows']}")
+
+    if 'Q0' in params:
+        url += f"&Q0={params['Q0']}"
+    if 'QN' in params:
+        url += f"&QN={params['QN']}"
+
+    response = requests.get(url, verify=False)
+    response.encoding = 'utf-8'
+
+    if response.status_code != 200:
+        return []
+
+    try:
+        tree = ElementTree.fromstring(response.content)
+        body = tree.find('body')
+        if body is None:
+            return []
+
+        items = body.find('items')
+        if items is None:
+            return []
+
+        pharmacies = []
+        for item in items.findall('item'):
+            pharmacy = {
+                'name': item.findtext('dutyName', default='N/A'),
+                'address': item.findtext('dutyAddr', default='N/A'),
+                'building': item.findtext('dutyMapimg', default='N/A'),
+                'telephone': item.findtext('dutyTel1', default='N/A'),
+                'hours': {
+                    'mon': (item.findtext('dutyTime1s', default='N/A'), item.findtext('dutyTime1c', default='N/A')),
+                    'tue': (item.findtext('dutyTime2s', default='N/A'), item.findtext('dutyTime2c', default='N/A')),
+                    'wed': (item.findtext('dutyTime3s', default='N/A'), item.findtext('dutyTime3c', default='N/A')),
+                    'thu': (item.findtext('dutyTime4s', default='N/A'), item.findtext('dutyTime4c', default='N/A')),
+                    'fri': (item.findtext('dutyTime5s', default='N/A'), item.findtext('dutyTime5c', default='N/A')),
+                    'sat': (item.findtext('dutyTime6s', default='N/A'), item.findtext('dutyTime6c', default='N/A')),
+                },
+                'lat': item.findtext('wgs84Lat', default='N/A'),
+                'lon': item.findtext('wgs84Lon', default='N/A'),
+            }
+            pharmacies.append(pharmacy)
+
+        return pharmacies
+
+    except ElementTree.ParseError as e:
+        print(f"XML 파싱 오류: {str(e)}")
+        return []
+
+
+def get_all_pharmacies_for_autocomplete():
+    # Try to get the data from cache first
+    cache_key = 'all_pharmacies_autocomplete'
+    all_pharmacies = cache.get(cache_key)
+
+    if all_pharmacies is None:
+        # If not in cache, fetch from API
+        all_pharmacies = []
+        page = 1
+        while True:
+            pharmacies = get_pharmacies(page=page, num_of_rows=100)
+            if not pharmacies:
+                break
+            all_pharmacies.extend([(p['name'], p['address']) for p in pharmacies])
+            page += 1
+
+        # Store in cache for 1 day
+        cache.set(cache_key, all_pharmacies, 60 * 60 * 24)
+
+    return all_pharmacies
+
+
+def pharmacy_list_view(request):
+    search_query = request.GET.get('search_query', '')
+    search_query = unquote(search_query)  # URL 디코딩
+
+    page = int(request.GET.get('page', 1))
+    pharmacies = get_pharmacies(search_query, page)
+    all_pharmacies = get_all_pharmacies_for_autocomplete()
+
+    # 검색 결과의 첫 번째 약국 좌표 설정
+    if pharmacies:
+        first_pharmacy = pharmacies[0]
+        search_center_lat = float(first_pharmacy['lat']) if first_pharmacy['lat'] != 'N/A' else 37.5665
+        search_center_lon = float(first_pharmacy['lon']) if first_pharmacy['lon'] != 'N/A' else 126.9780
+    else:
+        # 검색 결과가 없는 경우 기본값 설정 (예: 서울시청)
+        search_center_lat = 37.5665
+        search_center_lon = 126.9780
+
+    context = {
+        'pharmacies': pharmacies,
+        'search_query': search_query,
+        'all_pharmacies': all_pharmacies,
+        'search_center_lat': search_center_lat,
+        'search_center_lon': search_center_lon
+    }
+    return render(request, 'pharmacy_list.html', context)
+
+def drug_interaction_view(request):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # AJAX 요청 처리 (자동완성)
+        drug_name = request.GET.get('term', '')
+        drugs = get_drug_info(drug_name, settings.DUR_API_KEY)
+        suggestions = [{'label': drug['ITEM_NAME'], 'value': drug['ITEM_SEQ']} for drug in drugs] if drugs else []
+        return JsonResponse(suggestions, safe=False)
+
+    registered_drugs = request.session.get('registered_drugs', [])
+    comparison_result = None
+    error_message = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'register':
+            item_seq = request.POST.get('item_seq')
+            item_name = request.POST.get('item_name')
+            if item_seq and item_name:
+                drug_info = get_drug_detail(item_seq, settings.DUR_API_KEY)
+                if drug_info:
+                    registered_drugs.append(drug_info)
+                    request.session['registered_drugs'] = registered_drugs
+        elif action == 'remove':
+            item_seq = request.POST.get('item_seq')
+            registered_drugs = [drug for drug in registered_drugs if drug['item_seq'] != item_seq]
+            request.session['registered_drugs'] = registered_drugs
+        elif action == 'compare':
+            comparison_result = compare_drugs(registered_drugs, settings.DUR_API_KEY)
+
+    if request.method == 'GET':
+        drug_name = request.GET.get('drug_name')
+        if drug_name:
+            drugs = get_drug_info(drug_name, settings.DUR_API_KEY)
+            if not drugs:
+                error_message = f"'{drug_name}'에 대한 의약품 정보를 찾을 수 없습니다."
+
+    context = {
+        'registered_drugs': registered_drugs,
+        'comparison_result': comparison_result,
+        'error_message': error_message
+    }
+    return render(request, 'drug_interaction.html', context)
+
+def get_drug_detail(item_seq, api_key):
+    encoded_item_seq = urllib.parse.quote(item_seq)
+    url = f"http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04?serviceKey={api_key}&item_seq={encoded_item_seq}&type=xml"
+    response = requests.get(url, verify=False)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "lxml-xml")
+        item = soup.find("item")
+        if item:
+            drug_detail = {
+                "item_seq": item_seq,
+                "item_name": item.find("ITEM_NAME").text if item.find("ITEM_NAME") else "",
+                "entp_name": item.find("ENTP_NAME").text if item.find("ENTP_NAME") else "",
+                "material_name": item.find("MATERIAL_NAME").text if item.find("MATERIAL_NAME") else "",
+                "image_url": get_drug_image(item.find("ITEM_NAME").text) if item.find("ITEM_NAME") else None
+            }
+            print(f"Drug detail found: {drug_detail}")
+            return drug_detail
+    return None
+
+
+def compare_drugs(registered_drugs, api_key):
+    comparison_result = []
+    for i, drug1 in enumerate(registered_drugs):
+        for drug2 in registered_drugs[i + 1:]:
+            interaction_results = {
+                'contraindication': check_drug_interaction(drug1['item_seq'], drug2['item_seq'], api_key),
+                'age_restriction': check_age_restriction(drug1['item_seq'], drug2['item_seq'], api_key),
+                'pregnancy_restriction': check_pregnancy_restriction(drug1['item_seq'], drug2['item_seq'], api_key),
+                'elderly_caution': check_elderly_caution(drug1['item_seq'], drug2['item_seq'], api_key),
+                'dosage_caution': check_dosage_caution(drug1['item_seq'], drug2['item_seq'], api_key),
+                'duration_caution': check_duration_caution(drug1['item_seq'], drug2['item_seq'], api_key)
+            }
+
+            comparison_result.append({
+                'drug1': drug1['item_name'],
+                'drug2': drug2['item_name'],
+                'interactions': interaction_results
+            })
+
+    return comparison_result
+
+
+def fetch_interaction_data(url1, url2):
+    interactions = set()
+
+    for url in [url1, url2]:
+        response = requests.get(url, verify=False)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, "lxml-xml")
+            items = soup.find_all("item")
+            for item in items:
+                type_name = item.find("TYPE_NAME").text if item.find("TYPE_NAME") else "알 수 없는 유형"
+                mixture_ingr_eng = item.find("MIXTURE_INGR_ENG_NAME").text if item.find("MIXTURE_INGR_ENG_NAME") else "알 수 없는 성분"
+                content = item.find("PROHBT_CONTENT").text if item.find("PROHBT_CONTENT") else "상세 내용 없음"
+                interaction = f"{type_name} ({mixture_ingr_eng}): {content}"
+                interactions.add(interaction)
+        else:
+            interactions.add("정보를 가져오는 데 실패했습니다.")
+
+    return " | ".join(interactions) if interactions else "해당 정보 없음"
+
+def check_drug_interaction(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
+
+def check_age_restriction(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getSpcifyAgrdeTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getSpcifyAgrdeTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
+
+def check_pregnancy_restriction(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getPwnmTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getPwnmTabooInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
+
+def check_elderly_caution(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getOdsnAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getOdsnAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
+
+def check_dosage_caution(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getCpctyAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getCpctyAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
+
+def check_duration_caution(item_seq1, item_seq2, api_key):
+    url1 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getMdctnPdAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq1}&itemSeq2={item_seq2}&type=xml"
+    url2 = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getMdctnPdAtentInfoList03?serviceKey={api_key}&itemSeq={item_seq2}&itemSeq2={item_seq1}&type=xml"
+    return fetch_interaction_data(url1, url2)
 

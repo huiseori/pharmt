@@ -7,12 +7,118 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        /* 스타일 생략 */
+        /* 기존 스타일 생략 */
         .drug-info img {
             max-width: 150px;  /* 이미지 최대 너비 설정 */
             height: auto;  /* 비율에 맞게 높이 자동 설정 */
             display: block;  /* 블록 요소로 설정하여 아래 여백 조정 */
             margin: 10px auto;  /* 위 아래 여백 설정 */
+        }
+         :root {
+            --primary-color: #50C3E7;
+            --secondary-color: #3aa0c9;
+            --text-color: #333;
+            --bg-color: #f8f9fa;
+            --card-bg-color: #fff;
+           }
+         body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+        @font-face {
+            font-family: 'GangwonEduPowerExtraBoldA';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEduPowerExtraBoldA.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+        font-family: 'SUIT-Regular';
+        src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_suit@1.0/SUIT-Regular.woff2') format('woff2');
+        font-weight: 800;
+        font-style: normal;
+        }
+         h1 {
+            font-family: 'GangwonEduPowerExtraBoldA', sans-serif;
+            font-weight: normal;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+        }
+        .content {
+            margin-top: 20px;
+            margin-bottom: 70px;
+        }
+        .drug-info {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .drug-info h2 {
+            font-family: 'SUIT-Regular';
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        .drug-info img {
+            max-width: 200px;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+        .nav-pills {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .nav-pills .nav-link {
+            color: var(--text-color);
+            font-size: 1rem;
+            padding: 10px 15px;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .nav-pills .nav-link.active {
+            background-color: var(--primary-color);
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .tab-pane {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .precautions-content {
+            max-height: 100px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .precautions-content.expanded {
+            max-height: none;
+        }
+        .more-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+        .more-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .disclaimer {
+            color: #666;  /* 회색 글씨 */
+            font-size: 0.875rem;  /* 약간 작은 글씨 크기 */
+            text-align: center;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -25,19 +131,63 @@
         </h1>
         {% if drug_detail %}
             <div class="drug-info">
-                <h2><i class="fas fa-capsules icon"></i>{{ drug_detail.item_name }}</h2>
+                <h2><i class="fas fa-capsules"></i> {{ drug_detail.item_name }}</h2>
                 {% if drug_detail.image_url %}
                     <img src="{{ drug_detail.image_url }}" alt="{{ drug_detail.item_name }} 이미지" class="img-fluid">
                 {% endif %}
-                <p><strong>제조사:</strong> {{ drug_detail.entp_name }}</p>
-                <p><strong>효능효과:</strong> {{ drug_detail.efficacy }}</p>
-                <p><strong>용법용량:</strong> {{ drug_detail.usage_dosage }}</p>
-                <p><strong>사용상의 주의사항:</strong> {{ drug_detail.precautions }}</p>
+
+                <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="pills-manufacturer-tab" data-bs-toggle="pill" data-bs-target="#pills-manufacturer" type="button" role="tab">제조사</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pills-efficacy-tab" data-bs-toggle="pill" data-bs-target="#pills-efficacy" type="button" role="tab">효능효과</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pills-dosage-tab" data-bs-toggle="pill" data-bs-target="#pills-dosage" type="button" role="tab">용법용량</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pills-precautions-tab" data-bs-toggle="pill" data-bs-target="#pills-precautions" type="button" role="tab">주의사항</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent">
+                    <div class="tab-pane fade show active" id="pills-manufacturer" role="tabpanel">
+                        <p><strong>제조사:</strong> {{ drug_detail.entp_name }}</p>
+                    </div>
+                    <div class="tab-pane fade" id="pills-efficacy" role="tabpanel">
+                        <p><strong>효능효과:</strong> {{ drug_detail.efficacy }}</p>
+                    </div>
+                    <div class="tab-pane fade" id="pills-dosage" role="tabpanel">
+                        <p><strong>용법용량:</strong> {{ drug_detail.usage_dosage }}</p>
+                    </div>
+                    <div class="tab-pane fade" id="pills-precautions" role="tabpanel">
+                        <p><strong>사용상의 주의사항:</strong></p>
+                        <div class="precautions-content">{{ drug_detail.precautions }}</div>
+                        <button class="more-btn" onclick="togglePrecautions()">더보기</button>
+                    </div>
+                </div>
             </div>
         {% else %}
             <p class="error-message">의약품 상세 정보를 불러올 수 없습니다.</p>
         {% endif %}
+        <p class="disclaimer">위 데이터는 식품의약품안전처 및 건강보험심사평가원 등의 국가 행정기관 공공 데이터를 기반으로 제공됩니다.</p>
     </div>
-    <!-- 스크립트 생략 -->
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function togglePrecautions() {
+            var content = document.querySelector('.precautions-content');
+            var btn = document.querySelector('.more-btn');
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                btn.textContent = '더보기';
+            } else {
+                content.classList.add('expanded');
+                btn.textContent = '접기';
+            }
+        }
+    </script>
+
 </body>
 </html>
