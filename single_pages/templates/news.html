@@ -275,7 +275,7 @@
         <div class="list-group">
             {% if articles %}
                 {% for article in articles %}
-                    <a href="{% url 'news_summary' article_id=forloop.counter0 %}?query={{ query }}&page={{ page }}" class="list-group-item list-group-item-action">
+                    <a href="{% url 'news_summary' article_link=article.link %}?query={{ query }}&page={{ page }}" class="list-group-item list-group-item-action">
                         <h5 class="mb-1"><i class="fas fa-file-alt icon"></i>{{ article.title }}</h5>
                         <p class="mb-1">{{ article.summary }}</p>
                         <small><i class="fas fa-calendar-alt icon"></i>{{ article.date }}</small>

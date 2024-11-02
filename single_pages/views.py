@@ -36,7 +36,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 import requests
 from django.shortcuts import render, redirect
-from langchain_community.tools import authenticate
+#from langchain_community.tools import authenticate
 from django.views.decorators.http import require_http_methods
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
@@ -69,12 +69,28 @@ def splash_view(request):
     return render(request, 'splash.html')
 
 
-# @login_required
+@login_required
 def mypage_view(request):
     user = request.user
 
     if request.method == 'POST':
-        if 'gender' in request.POST and 'age' in request.POST:
+        if 'delete_medication' in request.POST:
+            # 삭제할 약품의 인덱스를 가져옵니다.
+            index = int(request.POST.get('delete_medication'))
+            medications = request.session.get('medications', [])
+
+            if 0 <= index < len(medications):
+                deleted_med = medications.pop(index)
+                request.session['medications'] = medications
+                request.session.modified = True
+                messages.success(request, f"{deleted_med['item_name']}이(가) 내 약품 목록에서 삭제되었습니다.")
+            else:
+                messages.error(request, "유효하지 않은 약품입니다.")
+
+            return redirect('mypage')
+
+        elif 'gender' in request.POST and 'age' in request.POST:
+            # 프로필 업데이트 처리
             gender = request.POST.get('gender')
             age = request.POST.get('age')
             user.first_name = gender
@@ -82,7 +98,8 @@ def mypage_view(request):
             user.save()
             messages.success(request, '프로필이 업데이트되었습니다.')
 
-        if 'blood_pressure' in request.POST and 'blood_sugar' in request.POST and 'weight' in request.POST:
+        elif 'blood_pressure' in request.POST and 'blood_sugar' in request.POST and 'weight' in request.POST:
+            # 건강 기록 저장 처리
             blood_pressure = request.POST.get('blood_pressure')
             blood_sugar = request.POST.get('blood_sugar')
             weight = request.POST.get('weight')
@@ -113,10 +130,12 @@ def mypage_view(request):
 
     age_range = range(1, 101)
     health_records = request.session.get('health_records', {})
+    medications = request.session.get('medications', [])
     context = {
         'age_range': age_range,
         'user': user,
         'health_records': health_records,
+        'medications': medications,
     }
     return render(request, 'mypage.html', context)
 
@@ -205,7 +224,7 @@ def fetch_medicine_list() -> List[str]:
     """
     num_of_rows = 100  # 한 페이지에 가져올 데이터 수
     page_no = 1  # 시작 페이지
-    max_pages = 10  # 최대 페이지 수 (1000개 수집 목표)
+    max_pages =20   # 최대 페이지 수 (1000개 수집 목표)
     medicines = []
 
     while page_no <= max_pages:
@@ -227,8 +246,8 @@ def fetch_medicine_list() -> List[str]:
             # print(f"페이지 {page_no}에서 {len(items)}개의 의약품을 가져왔습니다.")
 
             # 목표 수집량인 1000개에 도달하면 중단
-            if len(medicines) >= 1000:
-                medicines = medicines[:1000]  # 정확히 1000개로 자르기
+            if len(medicines) >= 2000:
+                medicines = medicines[:2000]  # 정확히 1000개로 자르기
                 break
 
             page_no += 1  # 다음 페이지로 이동
@@ -323,8 +342,11 @@ def initialize_data():
 
     # 여러 PDF 파일을 벡터 저장소에 추가
     pdf_paths = [
-        r"C:\Users\se711\PycharmProjects\graduation-project\uploads\test_1.pdf",
-        r"C:\Users\se711\PycharmProjects\graduation-project\uploads\twynsta.pdf"
+        r"uploads/test_1.pdf",
+        r"uploads/twynsta.pdf",
+        r"uploads/tylenol.pdf",
+        r"uploads/septrin.pdf",
+        r"uploads/ezn.pdf"
         # 필요에 따라 추가 PDF 파일 경로 추가
     ]
     add_pdfs_to_vectorstore(pdf_paths, vectorstore)
@@ -439,7 +461,9 @@ async def load_initial_data_async():
     encoded_drug_name = urllib.parse.quote("")  # 모든 품목 가져오기
     num_of_rows = 100  # 한 페이지에 100개의 결과
     page_no = 1  # 첫 번째 페이지
-    max_pages = 10  # 최대 10페이지
+    max_pages = 20
+
+    # 최대 10페이지
     all_processed_data = []
 
     async with aiohttp.ClientSession() as session:
@@ -487,10 +511,10 @@ def retrieve_relevant_context(question: str) -> Tuple[str, Optional[str]]:
 
     # docs_medicine = vectorstore.similarity_search(medicine_name, k=3)
     #print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs)}")
-    docs_medicine = []
-    if medicine_name:
-        docs_medicine = vectorstore.similarity_search(medicine_name, k=2)
-        print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs_medicine)}")
+    # docs_medicine = []
+
+    docs_medicine = vectorstore.similarity_search(medicine_name, k=2)
+    print(f"'{medicine_name}'에 대해 검색된 문서 수: {len(docs_medicine)}")
 
     # PDF 데이터와 관련된 문서 검색
     docs_pdf = vectorstore.similarity_search(question, k=2)
@@ -512,16 +536,8 @@ def retrieve_relevant_context(question: str) -> Tuple[str, Optional[str]]:
     # print(f"결합된 문맥:\n{context[:500]}...")
     # return context, None
 
-    top_item_name = None
-    for doc in docs_medicine:
-        lines = doc.page_content.splitlines()
-        for line in lines:
-            if line.startswith("품목명:"):
-                top_item_name = line.split(":")[1].strip()
-                break
-
     context = "\n".join([doc.page_content[:1000] for doc in docs])
-    return context, top_item_name
+    return context, medicine_name
 
 def add_button_to_response(result_content: str, drug_name: Optional[str]) -> str:
     """
@@ -531,7 +547,7 @@ def add_button_to_response(result_content: str, drug_name: Optional[str]) -> str
         return result_content  # 약물 이름이 없으면 버튼을 추가하지 않음
 
     encoded_drug_name = quote(drug_name)
-    detail_link = f"/drug_list/?drug_name={encoded_drug_name}"
+    detail_link = f"/drug_list/?query={encoded_drug_name}"
 
     escaped_drug_name = escape(drug_name)
 
@@ -549,13 +565,14 @@ prompt = ChatPromptTemplate.from_messages([
     당신은 중장년층과 노인층을 위한 친절하고 이해하기 쉬운 의약품 정보 제공 도우미입니다. 제공된 의약품 정보를 바탕으로 다음 지침을 따라주세요:
     1. 개조식으로 설명해 주세요.
     2. 여러번 생각하고 정확한 정보를 제공해주세요.
-    3. 정보를 제공할 때는 천천히, 명확하게, 그리고 단계적으로 설명해 주세요.
-    4. 질문의 맥락을 고려하여, 관련된 추가 정보나 조언을 제공하세요.
-    5. 약물 복용과 관련된 주의사항을 강조하고, 의사나 약사와 상담할 것을 권장하세요.
-    6. 건강에 도움이 되는 일반적인 조언(예: 규칙적인 운동, 균형 잡힌 식단)도 함께 제공하세요.
-    8. 답변은 간결하게 250자 이하로 답변해 주세요.
-    9. 필요한 경우 의약품 성분을 포함해서 답변해 주세요.
-    10.항상 존댓말을 사용하고, 따뜻하고 공감적인 톤으로 대화하세요.
+    3. 필요한 경우 의약품 성분을 포함해서 답변해 주세요.
+    4. 답변 시 한줄에 한 문장씩 답변해주세요. 길어질경우 줄바꿈해주세요.
+    5. 답변은 간결하게 300자 이하로 답변해 주세요.
+    6. 약물 복용과 관련된 주의사항을 강조하고, 의사나 약사와 상담할 것을 권장하세요.
+    8. 질문의 맥락을 고려하여, 관련된 추가 정보나 조언을 제공하세요.
+    9. 건강에 도움이 되는 일반적인 조언(예: 규칙적인 운동, 균형 잡힌 식단)도 함께 제공하세요.
+    10. 정보를 제공할 때는 천천히, 명확하게, 그리고 단계적으로 설명해 주세요. 
+    11. 항상 존댓말을 사용하고, 따뜻하고 공감적인 톤으로 대화하세요. 
     아래의 정보를 바탕으로 질문에 정확하고 이해하기 쉽게 답변해 주세요:
 
     {context}
@@ -616,10 +633,6 @@ def chatbot_view(request):
 
 
 
-
-#api_url = 'https://f2njh1jvk0.apigw.ntruss.com/custom/v1/31289/20f7f9592ec261660e6a41d64f3cd240d068f9e641c7fe728341b9a2e0979ff0/general'
-#secret_key = 'VFp4emJvZ2dlZENQRm9Pa3RmVlVhWENFRXhncGZIYWo='
-
 api_url = 'https://rfsoe9oge0.apigw.ntruss.com/custom/v1/33758/04551f065f17fa952a90b63ee0c5a01adda5ab1c7e8b4d2a3cf37ccaf94134ee/general'
 secret_key = 'YldyamVGd29WUU9VSUJSckJPT1JZcHdkTFR3cUJVVko='
 
@@ -631,19 +644,31 @@ def put_text(image, text, x, y, color=(0, 255, 0), font_size=22):
         color_coverted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(color_coverted)
 
-    if platform.system() == 'Darwin':
-        font = 'AppleGothic.ttf'
-    elif platform.system() == 'Windows':
-        font = 'malgun.ttf'
-
-    image_font = ImageFont.truetype(font, font_size)
+    # if platform.system() == 'Darwin':
+    #     font = 'AppleGothic.ttf'
+    # elif platform.system() == 'Windows':
+    #     font = 'malgun.ttf'
+    #
+    # image_font = ImageFont.truetype(font, font_size)
     draw = ImageDraw.Draw(image)
-    draw.text((x, y), text, font=image_font, fill=color)
+    draw.text((x, y), text, fill=color)
 
     numpy_image = np.array(image)
     opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
 
     return opencv_image
+
+
+irrelevant_words = [ "mg", "정", "캡슐", "tablet", "softgel", "연질캡슐"]
+irrelevant_pattern = re.compile(r'\d+밀리그램|\d+mg')
+brackets_pattern = re.compile(r'\((.*?)\)')  # 괄호 안의 텍스트를 추출하는 정규식
+
+def match_single_words(ocr_text, drug_name):
+    if ocr_text not in irrelevant_words and not irrelevant_pattern.match(ocr_text):
+        if ocr_text in drug_name:
+            return True  # 매칭되는 단어가 하나라도 있으면 True 반환
+    return False
+
 
 @csrf_exempt
 def ocr_process(request):
@@ -656,7 +681,7 @@ def ocr_process(request):
             # FormData 방식 (앨범 업로드)
             if 'image' in request.FILES:
                 image_file = request.FILES['image']
-                path = os.path.join('uploads', image_file.name)
+                path = os.path.join(settings.MEDIA_ROOT, image_file.name)
                 with open(path, 'wb') as f:
                     for chunk in image_file.chunks():
                         f.write(chunk)
@@ -750,7 +775,13 @@ def ocr_process(request):
             korean_pattern = re.compile(r'^[가-힣0-9]+$')  # 한글과 숫자만 포함된 텍스트 확인용 정규식
 
             for text in recognized_texts:
+                # irrelevant_words에 있는 단어가 포함된 텍스트는 제외
+                if any(word in text for word in irrelevant_words):
+                    print(f"Skipping '{text}' because it contains one of the irrelevant words")
+                    continue  # irrelevant_words에 포함된 단어가 있는 텍스트는 제외
+
                 if korean_pattern.match(text) and len(text) >= 2:  # 한국어이며 두 글자 이상인 경우
+
                     encoded_text = urllib.parse.quote_plus(text)
                     api_key = settings.DUR_API_KEY
                     url = f"http://apis.data.go.kr/1471000/DURPrdlstInfoService03/getUsjntTabooInfoList03?serviceKey={api_key}&itemName={encoded_text}&type=xml"
@@ -758,15 +789,38 @@ def ocr_process(request):
 
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.content, "html.parser")
-                        if soup.find_all("item"):  # 검색 결과가 있는 경우
-                            valid_texts.append(text)
+                        # API 응답에서 item_name 태그를 찾아 의약품명 확인
+                        item_name_tags = soup.find_all("item_name")
+                        if item_name_tags:
+                            for item_name in item_name_tags:
+                                drug_name = item_name.get_text().strip()  # 의약품명 추출 및 공백 제외
+
+                                # 괄호 안의 텍스트를 추출하여 확인
+                                bracketed_texts = brackets_pattern.findall(drug_name)
+                                skip = False
+                                for bracketed_text in bracketed_texts:
+                                    # OCR에서 추출된 단어가 괄호 안에 있는지 확인
+                                    if text in bracketed_text:
+                                        print(f"Skipping '{drug_name}' because '{text}' is inside the bracket")
+                                        skip = True
+                                        break
+
+                                if skip:
+                                    continue
+
+                                print(f"API returned drug name: {drug_name}")
+
+                                if match_single_words(text, drug_name):
+                                    print(f"Single word match found with '{drug_name}'")
+                                    valid_texts.append(text)  # valid_texts에 추가
+                    else:
+                        print(f"API request failed with status {response.status_code} for {text}")
 
             print(f"Valid Texts: {valid_texts}")
 
             # 검색 결과가 있는 첫 번째 유효 텍스트로 리다이렉트 URL 생성
             if valid_texts:
-                redirect_url = f'/drug_list?drug_name={(valid_texts[0])}'
-                print(f"Redirecting to: {redirect_url}")
+                redirect_url = f'/drug_list?query={urllib.parse.quote(valid_texts[0])}'
                 return JsonResponse({'redirect': redirect_url})
 
             print("No valid drug information found.")
@@ -780,19 +834,36 @@ def ocr_process(request):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def drug_list_view(request):
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        # AJAX 요청 처리 (자동완성)
-        drug_name = request.GET.get('term', '')
-        drugs = get_drug_info(drug_name, settings.DUR_API_KEY)
-        suggestions = [drug['ITEM_NAME'] for drug in drugs] if drugs else []
-        return JsonResponse(suggestions, safe=False)
-
     drug_info = None
     error_message = None
 
-    if request.method == 'GET':
+    if request.method == 'POST':
+        # 약품 정보를 세션에 저장
+        drug = {
+            'item_name': request.POST.get('item_name'),
+            'entp_name': request.POST.get('entp_name'),
+            'spclty_pblc': request.POST.get('spclty_pblc'),
+            'prduct_type': request.POST.get('prduct_type'),
+            'item_ingr_name': request.POST.get('item_ingr_name'),
+            'image_url': request.POST.get('image_url'),
+        }
+
+        # 세션에 약품 리스트가 없으면 초기화
+        if 'medications' not in request.session:
+            request.session['medications'] = []
+
+        # 약품을 세션에 추가
+        request.session['medications'].append(drug)
+        request.session.modified = True
+
+        messages.success(request, f"{drug['item_name']}이(가) 내 약품 목록에 추가되었습니다.")
+
+        return redirect('drug_list')  # 약품 목록 페이지로 리디렉션
+
+    elif request.method == 'GET':
+        # 기존 GET 요청 처리 코드
         api_key = settings.DUR_API_KEY  # 공공데이터포털에서 발급받은 인코딩된 인증 키
-        drug_name = request.GET.get('drug_name')  # 사용자 입력을 받음
+        drug_name = request.GET.get('query')  # 사용자 입력을 받음
 
         if drug_name:
             encoded_drug_name = urllib.parse.quote(drug_name)
@@ -806,7 +877,6 @@ def drug_list_view(request):
 
                 for item in soup.find_all("item"):
                     item_name = item.find("ITEM_NAME").text if item.find("ITEM_NAME") else ""
-                    print(f"Found item: {item_name}")  # 디버깅용 출력
                     if drug_name.lower() in item_name.lower():
                         entp_name = item.find("ENTP_NAME").text if item.find("ENTP_NAME") else None
                         spclty_pblc = item.find("SPCLTY_PBLC").text if item.find("SPCLTY_PBLC") else None
@@ -816,7 +886,6 @@ def drug_list_view(request):
 
                         detail_link = f"/drug_detail/{item_seq}/"  # 새로운 상세 정보 페이지로의 링크
                         image_url = get_drug_image(item_name)  # 약품 이미지 URL 가져오기
-                        # print(f"Image URL for {item_name}: {image_url}")  # 디버깅용 출력
 
                         drug_list.append({
                             "item_name": item_name,
@@ -828,12 +897,28 @@ def drug_list_view(request):
                             "image_url": image_url  # 약품 이미지 URL 추가
                         })
 
+                        context = {
+                            'query': drug_name
+                        }
+
                 if not drug_list:
                     error_message = f"'{drug_name}'에 대한 의약품 정보를 찾을 수 없습니다."
                 else:
                     drug_info = drug_list
             else:
                 error_message = f"API 요청 실패: {response.status_code} - {response.text}"
+
+        # 세션에서 저장된 약품 목록 가져오기
+        medications = request.session.get('medications', [])
+        # 저장된 약품의 이름 목록을 집합으로 생성
+        saved_item_names = set(med['item_name'] for med in medications)
+
+        return render(request, 'drug_list.html', {
+            'drug_info': drug_info,
+            'error_message': error_message,
+            'saved_item_names': saved_item_names,  # 추가된 부분
+            'query': drug_name
+        })
 
     return render(request, 'drug_list.html', {'drug_info': drug_info, 'error_message': error_message})
 
@@ -1080,18 +1165,24 @@ def get_articles(page=1):
     return articles
 
 def news_view(request):
+    query = request.GET.get('query','')
     page = request.GET.get('page', 1)
     articles = get_articles(page)
-    return render(request, 'news.html', {'articles': articles})
+    if query:  # 검색어가 있을 경우
+        # 검색어가 기사 제목이나 요약에 포함된 기사만 필터링
+        articles = [article for article in articles if query.lower() in article['title'].lower() or query.lower() in article['summary'].lower()]
+    return render(request, 'news.html', {'articles': articles, 'query': query, 'page': page})
 
-def news_summary_view(request, article_id):
+def news_summary_view(request, article_link):
     page = request.GET.get('page', 1)
     articles = get_articles(page)
-    article = articles[article_id]
+   # article = articles[article_id]
 
-    article_response = requests.get(article['link'])
+    article_response = requests.get(article_link)
     article_response.encoding = 'utf-8'
     article_soup = BeautifulSoup(article_response.text, 'html.parser')
+
+    article_title = article_soup.title.string.strip()
 
     article_content = article_soup.select_one('.view_con_t')
     if article_content:
@@ -1106,7 +1197,7 @@ def news_summary_view(request, article_id):
         # LangChain을 사용하여 요약 생성
         messages = [
             {"role": "system", "content": "You are a helpful assistant that summarizes Korean news articles."},
-            {"role": "user", "content": f"다음 기사를 자세히 요약해주세요 (약 300-400자):\n\n{article_text}"}
+            {"role": "user", "content": f"다음 기사를 자세히 요약해주세요 (약 200-300자):\n\n{article_text}"}
         ]
 
         response = llm(messages=messages)
@@ -1114,7 +1205,11 @@ def news_summary_view(request, article_id):
     except Exception as e:
         full_summary = f"요약 생성 중 오류 발생: {str(e)}"
 
-    article['full_summary'] = full_summary
+    article = {
+        'title': article_title,
+        'link': article_link,
+        'full_summary': full_summary
+    }
     return render(request, 'news_summary.html', {'article': article})
 
 def get_pharmacies(search_query='', page=1, num_of_rows=10):

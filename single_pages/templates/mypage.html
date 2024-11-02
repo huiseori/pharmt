@@ -1,29 +1,46 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <!-- 메타 데이터 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>마이페이지 - 팜트래커</title>
+    <!-- CSS 및 폰트 링크 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #50C3E7;
-            --secondary-color: #3aa0c9;
-            --text-color: #333;
-            --bg-color: #f8f9fa;
-        }
-
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
+        /* 폰트 적용 */
         @font-face {
             font-family: 'GangwonEduPowerExtraBoldA';
             src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEduPowerExtraBoldA.woff') format('woff');
             font-weight: normal;
             font-style: normal;
+        }
+        @font-face {
+            font-family: 'SUIT-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_suit@1.0/SUIT-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            --primary-color: #50C3E7;
+            --secondary-color: #3aa0c9;
+            --text-color: #333;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'SUIT-Regular', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'GangwonEduPowerExtraBoldA', sans-serif;
         }
 
         .navbar {
@@ -33,10 +50,9 @@
         }
 
         .navbar-brand {
-            font-family: 'GangwonEduPowerExtraBoldA';
-            font-weight: 600;
-            font-size: 1.6rem;
+            font-weight: 700;
             color: var(--primary-color);
+            font-family: 'GangwonEduPowerExtraBoldA', sans-serif;
         }
 
         .navbar-nav .nav-link {
@@ -52,87 +68,85 @@
             margin-bottom: 100px;
         }
 
-        h1 {
-            font-family: 'GangwonEduPowerExtraBoldA';
-            font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: 30px;
-            font-size: 29px;
-        }
-
-        .my-info-card, .my-drugs-card {
-            background-color: #fff;
+        .profile-header {
+            background-color: var(--card-bg);
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             margin-bottom: 30px;
             box-shadow: 0 4px 15px rgba(0,0,0,.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* Flexbox를 사용하여 정렬 */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .my-info-card:hover, .my-drugs-card:hover {
+        .profile-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0;
+            font-size: 2.5rem;
+        }
+
+        .profile-header .profile-button {
+            /* 절대 위치 제거 */
+            /* position: absolute;
+            top: 20px;
+            right: 20px; */
+            background-color: var(--secondary-color);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .profile-header .profile-button:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        /* 책갈피 스타일 */
+        .bookmark {
+            position: relative;
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 15px 25px;
+            margin-bottom: 10px;
+            border-radius: 0 30px 30px 0;
+            font-size: 1.5rem;
+            font-family: 'GangwonEduPowerExtraBoldA', sans-serif;
+            display: inline-block;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.05);
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* 카드 높이 최소화 */
+            min-height: 350px;
+        }
+
+        .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 6px 20px rgba(0,0,0,.1);
         }
 
-        .my-info-card h2, .my-drugs-card h2 {
-            color: var(--primary-color);
-            margin-bottom: 25px;
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-title {
             font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .my-info-card h2 i, .my-drugs-card h2 i {
-            margin-right: 10px;
-            font-size: 1.8rem;
-        }
-
-        .user-info {
-            display: grid;
-            gap: 20px;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .info-item label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #555;
-        }
-
-        .info-item p, .info-item select {
-            font-size: 1rem;
-            color: #333;
-            padding: 8px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-        }
-
-        .form-select {
-            width: 100%;
-            max-width: none;
-        }
-
-        .button-group {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 30px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            margin-bottom: 15px;
         }
 
         .btn-primary {
             background-color: var(--primary-color);
             border: none;
+            font-family: 'SUIT-Regular', sans-serif;
         }
 
         .btn-primary:hover {
@@ -149,35 +163,20 @@
             color: #333;
         }
 
-        .btn i {
-            margin-right: 8px;
-        }
-
         .list-group-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: transform 0.3s ease;
+            border: none;
+            background-color: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 10px;
         }
 
-        .list-group-item:hover {
-            transform: translateX(10px);
+        .medication-details {
+            display: none;
+            margin-top: 10px;
         }
 
-        #myPageMenu {
-            position: fixed;
-            top: 60px;
-            right: -300px;
-            width: 300px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,.1);
-            transition: right 0.3s ease-in-out;
-            z-index: 1000;
-            padding: 10px;
-        }
-
-        .show-menu {
-            right: 0;
+        .medication-details p {
+            margin-bottom: 5px;
         }
 
         .camera-btn {
@@ -221,9 +220,63 @@
             text-decoration: none;
             font-size: 24px;
         }
+
+        .custom-image-size {
+            width: 100%;
+            height: auto;
+            max-height: 180px;
+            object-fit: contain;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 576px) {
+            .card-body {
+                padding: 15px;
+            }
+
+            .footer a {
+                font-size: 20px;
+            }
+
+            .camera-btn {
+                width: 60px;
+                height: 60px;
+                line-height: 60px;
+                font-size: 24px;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .profile-header h1 {
+                font-size: 1.8rem;
+                margin-bottom: 10px;
+            }
+
+            profile-header .profile-button {
+                margin-top: 10px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .bookmark {
+                font-size: 1.2rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+
+            .custom-image-size {
+                max-height: 150px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- 네비게이션 바 -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">팜트래커</a>
@@ -255,130 +308,166 @@
         </div>
     </nav>
 
+    <!-- 콘텐츠 영역 -->
     <div class="container content">
-        <h1 class="text-center">마이페이지</h1>
-
-        <!-- 사용자 정보 카드 -->
-        <div class="my-info-card">
-            <h2><i class="fas fa-user-circle"></i> 내 정보</h2>
-            <form method="post" action="{% url 'mypage' %}">
-                {% csrf_token %}
-                <div class="user-info">
-                    <div class="info-item">
-                        <label>이름</label>
-                        <p>{{ user.username }}</p>
-                    </div>
-                    <div class="info-item">
-                        <label for="gender">성별</label>
-                        <select id="gender" name="gender" class="form-select">
-                            <option value="male" {% if user.first_name == 'male' %}selected{% endif %}>남자</option>
-                            <option value="female" {% if user.first_name == 'female' %}selected{% endif %}>여자</option>
-                            <option value="" {% if not user.first_name %}selected{% endif %}>미지정</option>
-                        </select>
-                    </div>
-                    <div class="info-item">
-                        <label for="age">나이</label>
-                        <select id="age" name="age" class="form-select">
-                            <option value="" {% if not user.last_name %}selected{% endif %}>미지정</option>
-                            {% for i in age_range %}
-                                <option value="{{ i }}" {% if user.last_name == i|stringformat:"s" %}selected{% endif %}>{{ i }}세</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="button-group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> 저장하기
-                    </button>
-                    <a href="{% url 'logout' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-sign-out-alt"></i> 로그아웃
-                    </a>
-                </div>
-            </form>
+        <div class="profile-header">
+            <h1>{{ user.username }}님의 마이페이지</h1>
+            <button class="profile-button" data-bs-toggle="modal" data-bs-target="#profileModal">
+                <i class="fas fa-user-edit"></i> 프로필 상세보기
+            </button>
         </div>
 
-        <!-- 건강 기록 카드 -->
-        <div class="my-info-card">
-            <h2><i class="fas fa-heartbeat"></i> 건강 기록</h2>
-            <form method="post" action="{% url 'mypage' %}">
+        <!-- 프로필 상세보기 모달 -->
+        <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="post" action="{% url 'mypage' %}">
                 {% csrf_token %}
-                <div class="user-info">
-                    <div class="info-item">
-                        <label for="blood_pressure">혈압 (mmHg)</label>
-                        <input type="text" id="blood_pressure" name="blood_pressure" class="form-control">
-                    </div>
-                    <div class="info-item">
-                        <label for="blood_sugar">혈당 (mg/dL)</label>
-                        <input type="text" id="blood_sugar" name="blood_sugar" class="form-control">
-                    </div>
-                    <div class="info-item">
-                        <label for="weight">체중 (kg)</label>
-                        <input type="text" id="weight" name="weight" class="form-control">
-                    </div>
+                <div class="modal-header">
+                  <h5 class="modal-title" id="profileModalLabel">프로필 상세보기</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 </div>
-                <div class="button-group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> 기록 저장하기
-                    </button>
+                <div class="modal-body">
+                  <!-- 성별 및 나이 수정 폼 -->
+                  <div class="mb-3">
+                      <label for="gender-modal" class="form-label">성별</label>
+                      <select id="gender-modal" name="gender" class="form-select">
+                          <option value="male" {% if user.first_name == 'male' %}selected{% endif %}>남자</option>
+                          <option value="female" {% if user.first_name == 'female' %}selected{% endif %}>여자</option>
+                          <option value="" {% if not user.first_name %}selected{% endif %}>미지정</option>
+                      </select>
+                  </div>
+                  <div class="mb-3">
+                      <label for="age-modal" class="form-label">나이</label>
+                      <select id="age-modal" name="age" class="form-select">
+                          <option value="" {% if not user.last_name %}selected{% endif %}>미지정</option>
+                          {% for i in age_range %}
+                              <option value="{{ i }}" {% if user.last_name == i|stringformat:"s" %}selected{% endif %}>{{ i }}세</option>
+                          {% endfor %}
+                      </select>
+                  </div>
                 </div>
-            </form>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">저장하기</button>
+                  <a href="{% url 'logout' %}" class="btn btn-outline-secondary">
+                      <i class="fas fa-sign-out-alt"></i> 로그아웃
+                  </a>
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
 
-            <!-- 저장된 건강 기록 표시 -->
-            <div class="mt-4">
-                <h3>저장된 건강 기록</h3>
-                {% if health_records %}
-                    {% for date, records in health_records.items %}
-                        <h4>{{ date }}</h4>
-                        <ul class="list-group mb-3">
-                            {% for record in records %}
-                                <li class="list-group-item">
-                                    <p><strong>혈압:</strong> {{ record.blood_pressure }} mmHg</p>
-                                    <p><strong>혈당:</strong> {{ record.blood_sugar }} mg/dL</p>
-                                    <p><strong>체중:</strong> {{ record.weight }} kg</p>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endfor %}
+        <!-- 내 약품 목록 -->
+        <div class="bookmark">
+            <i class="fas fa-pills"></i> 내 약품 목록
+        </div>
+        <div class="card">
+            <div class="card-body">
+                {% if medications %}
+                    <div class="row">
+                        {% for drug in medications %}
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h4 class="card-title">{{ drug.item_name }}</h4>
+                                        {% if drug.image_url %}
+                                            <img src="{{ drug.image_url }}" alt="{{ drug.item_name }} 이미지" class="img-fluid mb-3 custom-image-size">
+                                        {% endif %}
+                                        <button class="btn btn-primary btn-sm mb-2" onclick="toggleDetails({{ forloop.counter0 }})">더보기</button>
+                                        <div class="medication-details" id="details-{{ forloop.counter0 }}">
+                                            <p><strong>제품 유형:</strong> {{ drug.prduct_type }}</p>
+                                            <p><strong>성분명:</strong> {{ drug.item_ingr_name }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer text-end">
+                                        <form method="post" class="mt-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="delete_medication" value="{{ forloop.counter0 }}">
+                                            <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <p>저장된 건강 기록이 없습니다.</p>
+                    <p>저장된 약품이 없습니다.</p>
                 {% endif %}
             </div>
         </div>
 
+        <!-- 건강 기록 -->
+        <div class="bookmark">
+            <i class="fas fa-heartbeat"></i> 건강 기록
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'mypage' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="blood_pressure" class="form-label">혈압 (mmHg)</label>
+                        <input type="text" id="blood_pressure" name="blood_pressure" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="blood_sugar" class="form-label">혈당 (mg/dL)</label>
+                        <input type="text" id="blood_sugar" name="blood_sugar" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="weight" class="form-label">체중 (kg)</label>
+                        <input type="text" id="weight" name="weight" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 기록 저장하기
+                    </button>
+                </form>
 
-        <!-- 찜한 의약품 카드 -->
-        <div class="my-drugs-card">
-            <h2><i class="fas fa-pills icon"></i> 내 의약품</h2>
-            {% if favorite_drugs %}
-                <ul class="list-group">
-                    {% for drug in favorite_drugs %}
-                        <li class="list-group-item">
-                            <div>
-                                <h5>{{ drug.item_name }}</h5>
-                                <p>제조사: {{ drug.entp_name }}</p>
-                                <p>성분명: {{ drug.ingr_kor_name }}</p>
-                            </div>
-                            <div>
-                                <a href="{{ drug.detail_link }}" class="btn btn-primary btn-sm" target="_blank">상세 정보 보기</a>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>등록된 의약품이 없습니다.</p>
-            {% endif %}
+                <div class="mt-4">
+                    <h3>저장된 건강 기록</h3>
+                    {% if health_records %}
+                        {% for date, records in health_records.items %}
+                            <h4 class="mt-3">{{ date }}</h4>
+                            <ul class="list-group mb-3">
+                                {% for record in records %}
+                                    <li class="list-group-item">
+                                        <p><strong>혈압:</strong> {{ record.blood_pressure }} mmHg</p>
+                                        <p><strong>혈당:</strong> {{ record.blood_sugar }} mg/dL</p>
+                                        <p><strong>체중:</strong> {{ record.weight }} kg</p>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endfor %}
+                    {% else %}
+                        <p>저장된 건강 기록이 없습니다.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- 카메라 버튼 -->
     <a href="{% url 'ocr' %}" class="camera-btn" title="이미지로 약품 검색">
         <i class="fas fa-camera"></i>
     </a>
 
+    <!-- 푸터 -->
     <div class="footer">
         <a href="{% url 'home' %}"><i class="fas fa-home"></i></a>
         <a href="{% url 'mypage' %}"><i class="fas fa-user"></i></a>
     </div>
 
+    <!-- 스크립트 -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleDetails(index) {
+            var details = document.getElementById('details-' + index);
+            if (details.style.display === 'none' || details.style.display === '') {
+                details.style.display = 'block';
+            } else {
+                details.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
