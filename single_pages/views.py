@@ -10,6 +10,9 @@ import urllib.parse
 import re
 from io import BytesIO
 from datetime import date
+from django.conf import settings
+from django.contrib import messages
+from django.db.models import Q
 
 # Django Imports
 from django.shortcuts import render, redirect
@@ -44,6 +47,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
+from langchain.schema.output_parser import StrOutputParser
+from langchain.schema import Document
 
 # Local Imports
 from .models import ChatbotModel, Medicine  # ★핵심: DB 모델 임포트
@@ -252,60 +257,139 @@ def drug_detail_view(request, item_seq):
 
 
 # ==========================================
-# 4. 핵심 기능: RAG 챗봇 (Hybrid Retrieval)
+# 4. 핵심 기능: Advanced RAG 챗봇 (Query Expansion + Reranking)
 # ==========================================
-# 자소서 핵심 성과: LangChain-FAISS 통합 및 DB 연동을 통한 하이브리드 검색 구현
+# 자소서 핵심 성과: 쿼리 확장 및 Reranking을 통한 검색 정확도 고도화
 
-def extract_medicine_name_from_question(question: str):
-    """LLM을 이용해 질문에서 의약품 이름만 추출"""
+def expand_query(original_query: str) -> list:
+    """
+    [Step 1: Query Expansion]
+    사용자의 질문을 확장하여 다양한 검색어를 생성합니다.
+    예: "머리 아파" -> ["두통약", "진통제", "편두통 해결"]
+    """
+    system_prompt = """
+    당신은 의약품 검색 전문가입니다.
+    사용자의 질문을 보고, 데이터베이스에서 정보를 찾기 좋은 검색어 3개를 생성하세요.
+    결과는 쉼표(,)로 구분하여 단어만 나열하세요.
+    예시: 
+    질문: "배 아플 때 먹는 거" -> "복통, 소화제, 위장약"
+    """
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "질문에서 의약품 이름을 정확히 추출하세요. 없다면 'None'을 반환하세요."),
+        ("system", system_prompt),
         ("human", "{question}")
     ])
-    chain = prompt | llm
-    result = chain.invoke({"question": question})
-    extracted = result.content.strip()
-    return None if extracted.lower() in ['none', ''] else extracted
-
-def retrieve_relevant_context(question: str):
-    """
-    [Hybrid Retrieval Strategy]
-    1. Structured Data Search: MySQL DB에서 약품의 정형 데이터(효능, 용법)를 조회
-    2. Unstructured Data Search: Vector DB(FAISS)에서 관련 문서/가이드라인 검색
-    3. Context Merging: 두 정보를 결합하여 LLM에 제공
-    """
-    medicine_name = extract_medicine_name_from_question(question)
-    context_parts = []
     
-    # 1. DB 검색 (정확성 보장)
-    found_drug_name = None
-    if medicine_name:
+    # StrOutputParser가 없다면 .content로 접근하도록 수정
+    chain = prompt | llm
+    try:
+        response = chain.invoke({"question": original_query})
+        # 응답이 문자열이 아니라 객체일 경우 처리
+        content = response.content if hasattr(response, 'content') else str(response)
+        expanded_queries = [q.strip() for q in content.split(',')]
+        return [original_query] + expanded_queries
+    except Exception:
+        return [original_query]
+
+def rerank_documents(query: str, docs: list) -> list:
+    """
+    [Step 2: Reranking]
+    검색된 문서들이 질문과 얼마나 관련이 있는지 LLM이 평가하여 재정렬합니다.
+    (Cross-Encoder 대신 LLM을 Judge로 사용)
+    """
+    if not docs:
+        return []
+
+    # 평가용 프롬프트
+    system_prompt = """
+    당신은 검색 결과의 관련성을 평가하는 판사(Relevance Judge)입니다.
+    사용자의 질문(Query)과 검색된 문서(Document)가 주어지면,
+    이 문서가 질문에 답변하는 데 얼마나 도움이 되는지 0~100점 사이의 점수를 매기세요.
+    오직 숫자만 출력하세요.
+    """
+    
+    scored_docs = []
+    for doc in docs:
+        # 비용 절약을 위해 문서 앞부분만 평가
+        content_preview = doc.page_content[:500]
+        prompt_text = f"Query: {query}\nDocument: {content_preview}\nScore:"
+        
         try:
-            drug = Medicine.objects.filter(item_name__icontains=medicine_name).first()
-            if drug:
-                found_drug_name = drug.item_name
-                db_context = (
-                    f"[의약품 DB 정보]\n"
-                    f"약품명: {drug.item_name}\n"
-                    f"효능효과: {drug.efficacy}\n"
-                    f"용법용량: {drug.usage_dosage}\n"
-                    f"주의사항: {drug.precautions[:500]}...\n"
-                )
-                context_parts.append(db_context)
+            messages = [
+                ("system", system_prompt),
+                ("user", prompt_text)
+            ]
+            score_res = llm.invoke(messages).content.strip()
+            # 숫자 추출 (정규식 사용)
+            import re
+            match = re.search(r'\d+', score_res)
+            score = int(match.group()) if match else 0
         except Exception:
-            pass
+            score = 0
+            
+        scored_docs.append((doc, score))
+    
+    # 점수 높은 순으로 정렬
+    scored_docs.sort(key=lambda x: x[1], reverse=True)
+    
+    # 상위 3개 문서만 반환
+    top_k_docs = [item[0] for item in scored_docs[:3]]
+    return top_k_docs
 
-    # 2. Vector DB 검색 (보완 정보)
-    docs = vectorstore.similarity_search(question, k=2)
-    vector_context = "\n".join([doc.page_content[:500] for doc in docs])
-    if vector_context:
-        context_parts.append(f"[관련 문서 정보]\n{vector_context}")
+def retrieve_advanced_context(question: str):
+    """
+    [Hybrid Retrieval + Query Expansion + Reranking]
+    1. 질문 확장 (Query Expansion)
+    2. 다중 쿼리로 DB 및 벡터 검색 (Retrieval)
+    3. 중복 제거 및 통합
+    4. 관련성 재순위화 (Reranking)
+    """
+    # LangChain Document 객체 사용을 위해 필요 (임포트 안 되어 있다면 여기서 정의)
+    from langchain.schema import Document 
+    
+    # 1. 쿼리 확장
+    queries = expand_query(question)
+    print(f"확장된 검색어: {queries}")
+    
+    all_docs = []
+    
+    # 2. 확장된 쿼리로 검색 수행 (Hybrid)
+    for q in queries:
+        # A. 정형 데이터(DB) 검색 (정확한 약품명 매칭 시)
+        # DB 검색은 정확도가 높으므로 우선순위
+        db_results = Medicine.objects.filter(item_name__icontains=q)[:2]
+        for drug in db_results:
+            content = (
+                f"[DB정보] 약품명: {drug.item_name}\n"
+                f"효능: {drug.efficacy}\n"
+                f"용법: {drug.usage_dosage}\n"
+                f"주의사항: {drug.precautions}"
+            )
+            # DB 결과는 Document 객체로 변환 (metadata에 출처 기록)
+            all_docs.append(Document(page_content=content, metadata={"source": "DB", "name": drug.item_name}))
 
-    if not context_parts:
-        return "관련 정보를 찾을 수 없습니다.", None
+        # B. 비정형 데이터(Vector) 검색
+        if vectorstore:
+            vector_results = vectorstore.similarity_search(q, k=2)
+            all_docs.extend(vector_results)
 
-    final_context = "\n\n".join(context_parts)
-    return final_context, found_drug_name
+    # 3. 중복 제거 (내용 기준)
+    unique_docs = {doc.page_content: doc for doc in all_docs}.values()
+    unique_docs_list = list(unique_docs)
+    
+    # 4. 재순위화 (Reranking)
+    final_docs = rerank_documents(question, unique_docs_list)
+    
+    # 최종 컨텍스트 생성
+    context_text = "\n\n".join([doc.page_content for doc in final_docs])
+    
+    # 약품명 추출 (버튼 생성을 위해 - Rerank된 최상위 문서가 DB 출처라면 그 이름 사용)
+    extracted_name = None
+    for doc in final_docs:
+        if doc.metadata.get("source") == "DB":
+            extracted_name = doc.metadata.get("name")
+            break
+            
+    return context_text, extracted_name
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
@@ -317,16 +401,22 @@ def chatbot_view(request):
         body = json.loads(request.body.decode("utf-8"))
         question = body.get("question")
         
-        # 문맥 검색
-        context, extracted_name = retrieve_relevant_context(question)
+        if not question:
+            return JsonResponse({"error": "질문을 입력해주세요."}, status=400)
+
+        # Advanced RAG 파이프라인 실행
+        context, extracted_name = retrieve_advanced_context(question)
         
-        # 프롬프트 엔지니어링 (노인 친화적 답변)
+        # 답변 생성 프롬프트
         system_prompt = """
-        당신은 노인층을 위한 친절한 약사 도우미입니다.
-        1. 전문 용어 대신 쉬운 말을 사용하세요.
-        2. 글머리 기호를 사용해 가독성을 높이세요.
-        3. 제공된 Context 정보를 바탕으로 답변하세요.
-        Context: {context}
+        당신은 전문 약사 AI입니다. 
+        제공된 [Context]를 바탕으로 답변하세요.
+        1. 모르는 내용은 지어내지 말고, 정보가 없다고 말하세요.
+        2. 노인분들이 이해하기 쉽게 어려운 의학 용어는 풀어서 설명하세요.
+        3. 답변 끝에는 항상 "정확한 진단은 의사와 상담하세요"라고 덧붙이세요.
+        
+        [Context]:
+        {context}
         """
         
         prompt = ChatPromptTemplate.from_messages([
@@ -334,21 +424,21 @@ def chatbot_view(request):
             ("human", "{question}")
         ])
         
-        # Chain 실행
         chain = prompt | llm
         response = chain.invoke({"question": question, "context": context})
-        answer_content = response.content
+        answer = response.content if hasattr(response, 'content') else str(response)
 
-        # 약품 상세 정보 링크 버튼 추가 (UX 개선)
+        # 약품 상세 페이지 링크 버튼 추가 (UX)
         if extracted_name:
             encoded_name = urllib.parse.quote(extracted_name)
-            link_html = f'<br><a href="/drug_list/?query={encoded_name}" class="btn btn-sm btn-info">💊 {extracted_name} 상세 정보 보기</a>'
-            answer_content += link_html
+            link_html = f'<br><br><a href="/drug_list/?query={encoded_name}" target="_blank" class="btn-link">💊 {extracted_name} 상세 정보 보기</a>'
+            answer += link_html
 
-        return JsonResponse({"answer": answer_content})
+        return JsonResponse({"answer": answer})
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        print(f"Error: {e}")
+        return JsonResponse({"error": "처리 중 오류가 발생했습니다."}, status=500)
 
 
 # ==========================================
