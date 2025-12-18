@@ -183,8 +183,6 @@ def logout_view(request):
 # ==========================================
 # 3. 핵심 기능: 의약품 검색 (DB 기반 최적화)
 # ==========================================
-# 자소서 핵심 성과: API 실시간 호출 대신 로컬 DB 조회로 속도 67% 개선
-
 def drug_list_view(request):
     drug_info = []
     error_message = None
@@ -259,7 +257,7 @@ def drug_detail_view(request, item_seq):
 # ==========================================
 # 4. 핵심 기능: Advanced RAG 챗봇 (Query Expansion + Reranking)
 # ==========================================
-# 자소서 핵심 성과: 쿼리 확장 및 Reranking을 통한 검색 정확도 고도화
+# 쿼리 확장 및 Reranking을 통한 검색 정확도 고도화
 
 def expand_query(original_query: str) -> list:
     """
